@@ -17,6 +17,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: "checkpoints", label: "Checkpoints", summary: "Marshal-reported checkpoint passage and route progress." },
   { slug: "safety", label: "Safety & Alerts", summary: "Incidents, restrictions and authorized safety notices." },
   { slug: "communications", label: "Communications", summary: "Email/SMS to participants, staff alerts and public announcements." },
+  { slug: "engagement", label: "Engagement", summary: "Sponsors, People's Choice voting and spectator photo moderation." },
   { slug: "volunteers", label: "Volunteers", summary: "Marshal and volunteer assignments by position." },
   { slug: "reports", label: "Reports", summary: "Participation, dispatch intervals, staging utilization, incidents and year-over-year history." },
   { slug: "settings", label: "Event Settings", summary: "Event status, dates, registration window and defaults." },

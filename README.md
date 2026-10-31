@@ -21,10 +21,11 @@ Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Post
 | Staff roles by email, positions and shifts | Staff → Volunteers |
 | Reports, CSV export, printable operational plan (FR-10, §6) | Staff → Reports |
 | Event settings, categories, next-year duplication (FR-01) | Staff → Event Settings |
-| Spectator page: route map, published lineup, approximate progress, announcements (FR-08) | `/events/[slug]` |
+| Spectator page: route map, published lineup, approximate progress, announcements, favorites (on device), People's Choice voting, sponsors, photo gallery (FR-08) | `/events/[slug]`, `/events/[slug]/photos` |
+| Sponsors, voting window and results, photo moderation (FR-08 enhancements) | Staff → Engagement |
 | Audit history (§6) | Staff → Audit History |
 
-Not yet built: People's Choice voting, sponsor profiles, moderated photo submissions and media uploads (SDS optional enhancements), and payment processing (fees are disabled by policy).
+Not yet built: payment processing (fees are disabled by policy) and participant-uploaded entry media.
 
 ## How rules are enforced
 

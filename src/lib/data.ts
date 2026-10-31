@@ -22,6 +22,9 @@ export interface EventRow {
   settings: Record<string, unknown>;
   parade_hold: boolean;
   parade_hold_reason: string | null;
+  voting_opens_at: string | null;
+  voting_closes_at: string | null;
+  voting_results_published: boolean;
 }
 
 export interface ApplicationRow {
@@ -117,4 +120,9 @@ export function registrationOpen(event: EventRow, now = new Date()) {
   if (event.registration_opens_at && new Date(event.registration_opens_at) > now) return false;
   if (event.registration_closes_at && new Date(event.registration_closes_at) <= now) return false;
   return true;
+}
+
+export function votingOpen(event: EventRow, now = new Date()) {
+  if (!event.voting_opens_at || new Date(event.voting_opens_at) > now) return false;
+  return !event.voting_closes_at || new Date(event.voting_closes_at) > now;
 }
