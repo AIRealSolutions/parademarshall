@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffEvent } from "@/lib/data";
 import { toLocalInput } from "@/lib/format";
-import { isChiefDirector } from "@/lib/domain/roles";
+import { isChiefDirector, isDirector } from "@/lib/domain/roles";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { SettingsForm } from "./settings-form";
+import { CategoryEditor, CloneEventForm } from "./config-editors";
 
 export default async function SettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -39,18 +40,13 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
               registration_opens_at: toLocalInput(event.registration_opens_at, event.timezone),
               registration_closes_at: toLocalInput(event.registration_closes_at, event.timezone),
               default_separation_ft: Number(event.default_separation_ft),
+              arrival_instructions: String(s.arrival_instructions ?? ""),
+              accessible_viewing: String(s.accessible_viewing ?? ""),
             }}
           />
         </Card>
         <Card title="Categories">
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {categories?.map((c) => (
-              <li key={c.id} className={`rounded-full px-3 py-1 ${c.is_active ? "bg-stone-100" : "bg-stone-50 text-muted line-through"}`}>
-                {c.name}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-muted">Category, waiver and annual-duplication editors are next in the FR-01 backlog.</p>
+          <CategoryEditor eventId={event.id} categories={categories ?? []} canEdit={isDirector(access)} />
         </Card>
         <Card title="Policy">
           <ul className="space-y-1 text-sm">
@@ -58,6 +54,11 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
             <li>Registration fees: {s.fees_enabled ? "enabled" : "disabled"}</li>
           </ul>
         </Card>
+        {access.isSystemAdmin && (
+          <Card title="Next year's event">
+            <CloneEventForm eventId={event.id} name={event.name} year={event.year} />
+          </Card>
+        )}
       </div>
     </>
   );

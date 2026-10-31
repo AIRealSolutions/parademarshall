@@ -15,6 +15,8 @@ export interface SettingsValues {
   registration_opens_at: string;
   registration_closes_at: string;
   default_separation_ft: number;
+  arrival_instructions: string;
+  accessible_viewing: string;
 }
 
 const STATUS_OPTIONS: [string, string][] = [
@@ -67,6 +69,16 @@ export function SettingsForm({ values, canEdit }: { values: SettingsValues; canE
           <input id="registration_closes_at" name="registration_closes_at" type="datetime-local"
             defaultValue={values.registration_closes_at} className="input" />
         </Field>
+        <div className="sm:col-span-2">
+          <Field label="Arrival instructions" htmlFor="arrival_instructions" hint="Added to every staging instruction email (arrival window, parking, what to bring).">
+            <textarea id="arrival_instructions" name="arrival_instructions" rows={3} defaultValue={values.arrival_instructions} className="input" />
+          </Field>
+        </div>
+        <div className="sm:col-span-2">
+          <Field label="Accessible viewing information" htmlFor="accessible_viewing" hint="Shown to the public on the event page.">
+            <textarea id="accessible_viewing" name="accessible_viewing" rows={3} defaultValue={values.accessible_viewing} className="input" />
+          </Field>
+        </div>
       </fieldset>
       {state.error && <Notice tone="bad">{state.error}</Notice>}
       {state.ok && <Notice tone="good">Settings saved.</Notice>}

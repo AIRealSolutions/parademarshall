@@ -163,7 +163,10 @@ export default async function ApplicationReview({ params }: { params: Promise<{ 
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-xs text-muted">Staging placement and lineup order arrive in Phase 2–3.</p>
+              <p className="mt-3 text-xs">
+                <Link href={`/admin/${slug}/staging`} className="text-brand hover:underline">Place on the staging map</Link>{" · "}
+                <Link href={`/admin/${slug}/units`} className="text-brand hover:underline">Manage units</Link>
+              </p>
             </Card>
           )}
           <Card title="Organization">

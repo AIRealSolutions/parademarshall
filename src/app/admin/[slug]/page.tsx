@@ -21,7 +21,8 @@ export default async function DirectorDashboard({ params }: { params: Promise<{ 
   const { event } = await requireStaffEvent(slug);
   const supabase = await createClient();
 
-  const [{ data, error }, { data: recent }] = await Promise.all([
+  const now = new Date().toISOString();
+  const [{ data, error }, { data: recent }, { data: staffNotices }] = await Promise.all([
     supabase.rpc("event_dashboard", { p_event_id: event.id }),
     supabase
       .from("applications")
@@ -30,6 +31,15 @@ export default async function DirectorDashboard({ params }: { params: Promise<{ 
       .neq("status", "draft")
       .order("submitted_at", { ascending: false, nullsFirst: false })
       .limit(6),
+    supabase
+      .from("announcements")
+      .select("id, title, body, is_emergency")
+      .eq("event_id", event.id)
+      .eq("audience", "staff")
+      .lte("published_at", now)
+      .or(`expires_at.is.null,expires_at.gt.${now}`)
+      .order("published_at", { ascending: false })
+      .limit(3),
   ]);
   const d = data as Dashboard | null;
   if (error || !d) return <Notice tone="bad">Could not load the dashboard: {error?.message}</Notice>;
@@ -49,6 +59,13 @@ export default async function DirectorDashboard({ params }: { params: Promise<{ 
   return (
     <>
       <PageHeader title="Director Dashboard" subtitle={`Event status: ${event.status.replace(/_/g, " ")}`} />
+      {staffNotices?.map((n) => (
+        <div key={n.id} className="mb-3">
+          <Notice tone={n.is_emergency ? "bad" : "info"}>
+            <span className="font-semibold">{n.title}:</span> {n.body}
+          </Notice>
+        </div>
+      ))}
       {attention.length > 0 && (
         <div className="mb-6">
           <Notice tone="warn">

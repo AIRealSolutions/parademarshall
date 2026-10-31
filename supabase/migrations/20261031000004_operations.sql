@@ -478,6 +478,57 @@ begin
 end $$;
 
 -- -----------------------------------------------------------------------------
+-- FR-09: incident reports notify leadership and the public safety liaison.
+-- -----------------------------------------------------------------------------
+
+create function public.notify_incident() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (event_id, recipient_id, channel, subject, body, related_table, related_id)
+  select distinct new.event_id, r.user_id,
+         case when new.severity in ('high', 'critical') then 'sms'::public.notification_channel
+              else 'in_app'::public.notification_channel end,
+         format('Incident (%s): %s', new.severity, new.summary),
+         coalesce(new.details, new.summary), 'incidents', new.id
+  from public.event_roles r
+  where r.event_id = new.event_id
+    and r.role in ('parade_director', 'assistant_director', 'public_safety_liaison')
+    and r.user_id is distinct from new.reported_by;
+  return null;
+end $$;
+
+create trigger incidents_notify after insert on public.incidents
+  for each row execute function public.notify_incident();
+
+-- -----------------------------------------------------------------------------
+-- Announcements: any authorized issuer may publish or withdraw an announcement,
+-- not only its author. Authorship is still enforced on insert.
+-- -----------------------------------------------------------------------------
+
+drop policy announcements_write on public.announcements;
+
+create policy announcements_insert on public.announcements for insert to authenticated
+  with check (
+    issued_by = auth.uid() and
+    public.has_event_role(event_id, case when is_emergency
+      then array['parade_director', 'public_safety_liaison']::public.app_role[]
+      else array['parade_director', 'assistant_director', 'public_safety_liaison']::public.app_role[] end)
+  );
+create policy announcements_modify on public.announcements for update to authenticated
+  using (
+    public.has_event_role(event_id, case when is_emergency
+      then array['parade_director', 'public_safety_liaison']::public.app_role[]
+      else array['parade_director', 'assistant_director', 'public_safety_liaison']::public.app_role[] end)
+  )
+  with check (
+    public.has_event_role(event_id, case when is_emergency
+      then array['parade_director', 'public_safety_liaison']::public.app_role[]
+      else array['parade_director', 'assistant_director', 'public_safety_liaison']::public.app_role[] end)
+  );
+create policy announcements_delete on public.announcements for delete to authenticated
+  using (public.has_event_role(event_id, array['parade_director']::public.app_role[]));
+
+-- -----------------------------------------------------------------------------
 -- FR-10: reporting
 -- -----------------------------------------------------------------------------
 

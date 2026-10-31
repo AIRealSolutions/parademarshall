@@ -4,17 +4,27 @@ A mobile-first platform for managing a community parade from registration throug
 
 Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Postgres + PostGIS, Auth, RLS, Storage) · Vercel.
 
-## Status: Phase 1 (foundation and registration)
+## What's built
 
-| Area | State |
+| Area (SDS) | Where |
 | --- | --- |
-| Database schema for the whole SDS data model (§5) | ✅ |
-| Row Level Security on every table, roles per event (§2) | ✅ |
-| Workflow rules in the database: application lifecycle, staging placement, restrictions, check-in, single-authorization dispatch, parade-wide hold, checkpoints, publication layer, annual cloning (§6) | ✅ tested |
-| Participant registration, drafts, resubmission, withdrawal and QR pass | ✅ |
-| Director dashboard, application review, audit history and event settings | ✅ |
-| Public event page (announcements, published lineup, approximate progress) | ✅ basic |
-| Staging map editor, lineup builder, dispatch and marshal screens | Phases 2–4 (database rules are already in place) |
+| Registration with drafts, vehicles, footprint, waiver and QR pass (FR-02) | `/events/[slug]/register`, `/my` |
+| Application review with role-aware transitions (FR-02) | Staff → Applications |
+| Unit registry: split multi-vehicle entries, reissue passes, print passes | Staff → Unit Registry |
+| Staging map editor: draw streets, route and checkpoints; edit blocks and lanes; place units by measured footprint; live conflict checks; restrictions; plan approval with versioning; arrival instructions (FR-03, FR-04) | Staff → Staging Map |
+| Lineup builder: drag-and-drop or keyboard reordering, final unit, feasibility warnings (lane order, consecutive bands, split groups), publish to spectators (FR-05) | Staff → Lineup Builder |
+| Dispatch center: single active authorization, release, revoke, hold/skip, parade-wide hold, conflict resolution, live via Supabase Realtime (FR-06) | Staff → Dispatch Center |
+| Marshal field app: QR scan check-in, staged/ready, checkpoint passage, incident reports, offline queue showing "saved on device" vs "synced" (FR-06, FR-07) | `/marshal` |
+| Checkpoint progress matrix (FR-07) | Staff → Checkpoints |
+| Incidents and restrictions (FR-04, FR-09) | Staff → Safety & Alerts |
+| Announcements (public, participants, staff, emergency) and email/SMS delivery log (FR-09) | Staff → Communications |
+| Staff roles by email, positions and shifts | Staff → Volunteers |
+| Reports, CSV export, printable operational plan (FR-10, §6) | Staff → Reports |
+| Event settings, categories, next-year duplication (FR-01) | Staff → Event Settings |
+| Spectator page: route map, published lineup, approximate progress, announcements (FR-08) | `/events/[slug]` |
+| Audit history (§6) | Staff → Audit History |
+
+Not yet built: People's Choice voting, sponsor profiles, moderated photo submissions and media uploads (SDS optional enhancements), and payment processing (fees are disabled by policy).
 
 ## How rules are enforced
 
@@ -48,6 +58,18 @@ update public.profiles set is_system_admin = true where email = 'you@example.com
 insert into public.event_roles (event_id, user_id, role)
 select '00000000-0000-4000-8000-000000002026', id, 'parade_director' from public.profiles where email = 'you@example.com';
 ```
+
+### Realtime
+
+The Dispatch Center and marshal screens subscribe to database changes. The migrations add the operational tables to the `supabase_realtime` publication; Realtime applies the same RLS policies, so spectators receive nothing. If the connection drops, screens fall back to polling.
+
+### Notifications
+
+Status changes, arrival instructions and incident alerts are queued in `notifications`. They are delivered by `/api/cron/notifications` (Vercel Cron, daily on the Hobby plan) or immediately with **Deliver pending now** on the Communications page. Configure `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and either Resend (email) or Twilio (SMS). Without a provider, messages stay queued. SMS falls back to email.
+
+### Map tiles
+
+Maps use OpenStreetMap tiles, which suit low-volume use under the [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/). For a high-traffic public page, switch the tile URL in `src/components/map/parade-map.tsx` to a commercial provider.
 
 ### Deploying to Vercel
 

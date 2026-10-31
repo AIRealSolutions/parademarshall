@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
-import { ButtonLink, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
+import { ButtonLink, EmptyState, Notice, PageHeader, StatusBadge } from "@/components/ui";
 import type { ApplicationStatus } from "@/lib/domain/applications";
 
 export const metadata: Metadata = { title: "My entries" };
@@ -11,13 +11,22 @@ export const metadata: Metadata = { title: "My entries" };
 export default async function MyEntries() {
   const user = await requireUser("/my");
   const supabase = await createClient();
-  const [{ data: apps }, { data: openEvents }] = await Promise.all([
+  const now = new Date().toISOString();
+  const [{ data: apps }, { data: openEvents }, { data: notices }] = await Promise.all([
     supabase
       .from("applications")
       .select("id, entry_name, status, updated_at, events(slug, name, year), organizations(name)")
       .eq("submitted_by", user.id)
       .order("updated_at", { ascending: false }),
     supabase.from("events").select("slug, name, year").eq("status", "registration_open").order("year"),
+    supabase
+      .from("announcements")
+      .select("id, title, body, is_emergency, published_at, expires_at")
+      .eq("audience", "participants")
+      .lte("published_at", now)
+      .or(`expires_at.is.null,expires_at.gt.${now}`)
+      .order("published_at", { ascending: false })
+      .limit(5),
   ]);
 
   return (
@@ -30,6 +39,16 @@ export default async function MyEntries() {
           </ButtonLink>
         ))}
       />
+      {notices && notices.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {notices.map((n) => (
+            <Notice key={n.id} tone={n.is_emergency ? "bad" : "info"}>
+              <p className="font-semibold">{n.title}</p>
+              <p className="mt-1 whitespace-pre-line">{n.body}</p>
+            </Notice>
+          ))}
+        </div>
+      )}
       {apps && apps.length > 0 ? (
         <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
           {apps.map((a) => {

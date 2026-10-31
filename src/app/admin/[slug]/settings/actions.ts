@@ -21,6 +21,8 @@ const schema = z.object({
   registration_opens_at: z.string(),
   registration_closes_at: z.string(),
   default_separation_ft: z.coerce.number().min(0).max(200),
+  arrival_instructions: z.string().max(2000),
+  accessible_viewing: z.string().max(2000),
 });
 
 export async function updateEventSettings(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
@@ -31,9 +33,15 @@ export async function updateEventSettings(_prev: SettingsState, formData: FormDa
   const v = parsed.data;
 
   const supabase = await createClient();
+  const { data: current } = await supabase.from("events").select("settings").eq("id", eventId).maybeSingle();
   const { data, error } = await supabase
     .from("events")
     .update({
+      settings: {
+        ...((current?.settings as Record<string, unknown>) ?? {}),
+        arrival_instructions: v.arrival_instructions.trim(),
+        accessible_viewing: v.accessible_viewing.trim(),
+      },
       name: v.name,
       host_organization: v.host_organization || null,
       municipality: v.municipality || null,

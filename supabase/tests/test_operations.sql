@@ -175,6 +175,40 @@ select public.resolve_dispatch_conflict(test.id('conflict'), 'Duplicate offline 
 select test.expect_error(format($$select public.resolve_dispatch_conflict(%L, 'again')$$, test.id('conflict')), 'does not need');
 reset role;
 
+-- Incidents notify leadership ----------------------------------------------------------
+select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000008', false);
+set role authenticated;
+insert into public.incidents (event_id, summary, severity, reported_by)
+values ('00000000-0000-4000-8000-000000002026', 'Horse spooked near Nash St', 'high', auth.uid());
+reset role;
+do $$ begin
+  assert exists (select 1 from public.notifications where related_table = 'incidents' and channel = 'sms'
+                   and recipient_id = '10000000-0000-4000-8000-000000000002');
+end $$;
+
+-- Announcements: assistant can't issue emergencies; any director can withdraw ----------
+reset role;
+insert into public.event_roles (event_id, user_id, role)
+values ('00000000-0000-4000-8000-000000002026', '10000000-0000-4000-8000-000000000003', 'assistant_director');
+select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000003', false);
+set role authenticated;
+select test.expect_error($$insert into public.announcements (event_id, audience, title, body, is_emergency, issued_by)
+  values ('00000000-0000-4000-8000-000000002026', 'public', 'Evacuate', 'Now', true, auth.uid())$$, 'row-level security');
+insert into public.announcements (event_id, audience, title, body, issued_by, published_at)
+values ('00000000-0000-4000-8000-000000002026', 'public', 'Parking', 'Use the Brunswick St lot.', auth.uid(), now());
+reset role;
+select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', false);
+set role authenticated;
+update public.announcements set expires_at = now() where title = 'Parking';
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+set role anon;
+do $$ begin
+  assert (select count(*) from public.announcements where title = 'Parking') = 0, 'withdrawn announcement still public';
+end $$;
+reset role;
+delete from public.event_roles where user_id = '10000000-0000-4000-8000-000000000003' and role = 'assistant_director';
+
 -- Reports -------------------------------------------------------------------------
 select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', false);
 set role authenticated;

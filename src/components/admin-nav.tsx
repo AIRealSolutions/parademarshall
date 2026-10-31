@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ADMIN_SECTIONS } from "@/lib/admin-nav";
 
-export function AdminNav({ slug }: { slug: string }) {
+export function AdminNav({ slug, roles, isAdmin }: { slug: string; roles: string[]; isAdmin: boolean }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Staff sections" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
       <ul className="flex gap-1 lg:flex-col">
-        {ADMIN_SECTIONS.map((s) => {
+        {ADMIN_SECTIONS.filter((s) => isAdmin || !s.roles || s.roles.some((r) => roles.includes(r))).map((s) => {
           const href = `/admin/${slug}${s.slug ? `/${s.slug}` : ""}`;
           const active = s.slug ? pathname.startsWith(href) : pathname === href;
           return (
@@ -22,9 +22,6 @@ export function AdminNav({ slug }: { slug: string }) {
                 }`}
               >
                 {s.label}
-                {s.phase && (
-                  <span className={`text-[10px] ${active ? "text-white/80" : "text-muted"}`}>P{s.phase}</span>
-                )}
               </Link>
             </li>
           );

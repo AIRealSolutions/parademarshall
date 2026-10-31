@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getEventBySlug, registrationOpen } from "@/lib/data";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Badge, ButtonLink, Card, EmptyState, Notice } from "@/components/ui";
+import { ParadeMap } from "@/components/map";
+import { AutoRefresh } from "@/components/auto-refresh";
+import type { GeoLine, GeoPoint } from "@/lib/domain/staging";
 
 interface LineupItem {
   unit_id: string;
@@ -17,7 +20,8 @@ interface Publication {
   version: number;
   published_at: string;
   lineup: LineupItem[];
-  checkpoints: { code: string; name: string; sequence: number }[];
+  route: { sequence: number; name: string; geometry: GeoLine }[];
+  checkpoints: { code: string; name: string; sequence: number; geometry: GeoPoint }[];
 }
 
 interface Progress {
@@ -63,6 +67,7 @@ export default async function EventPortal({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+      {(event.status === "live" || event.parade_hold) && <AutoRefresh seconds={30} />}
       <header className="space-y-2">
         <p className="text-sm font-medium text-brand">{event.municipality}</p>
         <h1 className="text-3xl font-semibold tracking-tight">
@@ -89,6 +94,17 @@ export default async function EventPortal({ params }: { params: Promise<{ slug: 
           <p className="mt-1 text-xs opacity-75">{formatDateTime(a.published_at, event.timezone)}</p>
         </Notice>
       ))}
+
+      {pub && pub.route.length > 0 && (
+        <section aria-label="Route map">
+          <ParadeMap
+            route={pub.route.map((r) => ({ name: r.name, geometry: r.geometry }))}
+            checkpoints={pub.checkpoints.map((c) => ({ code: c.code, name: c.name, geometry: c.geometry, is_finish: c.sequence === pub.checkpoints.length }))}
+            className="h-72 sm:h-96"
+          />
+          <p className="mt-1 text-xs text-muted">Blue line: parade route. Dots: checkpoints, finish in red.</p>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -165,7 +181,12 @@ export default async function EventPortal({ params }: { params: Promise<{ slug: 
               ))}
             </ol>
           )}
-          <p className="mt-4 text-xs text-muted">An interactive route map will be added here.</p>
+          {settings.accessible_viewing && (
+            <div className="mt-4 border-t border-border pt-3 text-sm">
+              <p className="text-xs text-muted uppercase">Accessible viewing</p>
+              <p className="whitespace-pre-line">{String(settings.accessible_viewing)}</p>
+            </div>
+          )}
         </Card>
       </div>
     </main>
