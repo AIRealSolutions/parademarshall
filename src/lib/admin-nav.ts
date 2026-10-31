@@ -1,28 +1,52 @@
+export type SectionGroup = "Overview" | "Entries" | "Planning" | "Parade day" | "People & outreach" | "Records";
+
 export interface AdminSection {
   slug: string;
   label: string;
+  /** Short label for the phone tab bar. */
+  short: string;
+  group: SectionGroup;
   /** Roles that see this section; undefined means all staff. */
   roles?: string[];
   summary: string;
 }
 
+export const SECTION_GROUPS: SectionGroup[] = ["Overview", "Entries", "Planning", "Parade day", "People & outreach", "Records"];
+
 // Order follows SDS §4, "Administrative application".
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { slug: "", label: "Director Dashboard", summary: "Registration, staging and operational status at a glance." },
-  { slug: "applications", label: "Applications", summary: "Review, approve or request corrections to entries." },
-  { slug: "units", label: "Unit Registry", summary: "Dispatchable units, footprints, split units and QR passes." },
-  { slug: "staging", label: "Staging Map", summary: "Draw staging segments, lanes and blocks; assign units by measured footprint; detect conflicts." },
-  { slug: "lineup", label: "Lineup Builder", summary: "Drag-and-drop procession order independent of staging location, with feasibility warnings." },
-  { slug: "dispatch", label: "Dispatch Center", summary: "Single active release authorization at the Bay/Howe merge, holds and parade-wide hold/resume." },
-  { slug: "checkpoints", label: "Checkpoints", summary: "Marshal-reported checkpoint passage and route progress." },
-  { slug: "safety", label: "Safety & Alerts", summary: "Incidents, restrictions and authorized safety notices." },
-  { slug: "communications", label: "Communications", summary: "Email/SMS to participants, staff alerts and public announcements." },
-  { slug: "engagement", label: "Engagement", summary: "Sponsors, People's Choice voting and spectator photo moderation." },
-  { slug: "volunteers", label: "Volunteers", summary: "Marshal and volunteer assignments by position." },
-  { slug: "reports", label: "Reports", summary: "Participation, dispatch intervals, staging utilization, incidents and year-over-year history." },
-  { slug: "settings", label: "Event Settings", summary: "Event status, dates, registration window and defaults." },
-  { slug: "audit", label: "Audit History", roles: ["parade_director", "assistant_director", "fire_chief", "police_chief"], summary: "Timestamped record of approvals, assignments and dispatch actions." },
+  { slug: "", label: "Director Dashboard", short: "Home", group: "Overview", summary: "What needs attention, at a glance." },
+  { slug: "applications", label: "Applications", short: "Entries", group: "Entries", summary: "Review, approve or request corrections to entries." },
+  { slug: "units", label: "Unit Registry", short: "Units", group: "Entries", summary: "Units, footprints, split units, passes and signs." },
+  { slug: "staging", label: "Staging Map", short: "Staging", group: "Planning", summary: "Staging streets, blocks and unit placement." },
+  { slug: "lineup", label: "Lineup Builder", short: "Lineup", group: "Planning", summary: "Procession order and publishing the public lineup." },
+  { slug: "dispatch", label: "Dispatch Center", short: "Dispatch", group: "Parade day", summary: "Release units at the merge; parade-wide hold." },
+  { slug: "checkpoints", label: "Checkpoints", short: "Route", group: "Parade day", summary: "Where each unit has been reported." },
+  { slug: "safety", label: "Safety & Alerts", short: "Safety", group: "Parade day", summary: "Incidents and street restrictions." },
+  { slug: "communications", label: "Communications", short: "Messages", group: "People & outreach", summary: "Announcements and the email/text log." },
+  { slug: "engagement", label: "Engagement", short: "Engage", group: "People & outreach", summary: "Sponsors, People's Choice voting and photos." },
+  { slug: "volunteers", label: "Volunteers", short: "Staff", group: "People & outreach", summary: "Staff roles, positions and shifts." },
+  { slug: "reports", label: "Reports", short: "Reports", group: "Records", summary: "Totals, dispatch timing, printable plan and exports." },
+  { slug: "settings", label: "Event Settings", short: "Settings", group: "Records", summary: "Event status, dates, categories and defaults." },
+  { slug: "audit", label: "Audit History", short: "Audit", group: "Records", roles: ["parade_director", "assistant_director", "fire_chief", "police_chief"], summary: "Who changed what, and when." },
 ];
 
 /** The operational sections traffic officers use; the rest hold participant details. */
 export const TRAFFIC_OFFICER_SECTIONS = new Set(["", "staging", "lineup", "dispatch", "checkpoints", "safety"]);
+
+/** Sections pinned to the phone tab bar (the rest live under Menu). */
+export const TAB_SLUGS = ["", "applications", "dispatch", "safety"];
+export const TRAFFIC_TAB_SLUGS = ["", "staging", "dispatch", "safety"];
+
+export function visibleSections(roles: string[], isAdmin: boolean) {
+  const trafficOnly = !isAdmin && roles.length > 0 && roles.every((r) => r === "traffic_officer");
+  const sections = ADMIN_SECTIONS.filter(
+    (s) =>
+      (isAdmin || !s.roles || s.roles.some((r) => roles.includes(r))) &&
+      (!trafficOnly || TRAFFIC_OFFICER_SECTIONS.has(s.slug)),
+  );
+  const tabs = (trafficOnly ? TRAFFIC_TAB_SLUGS : TAB_SLUGS)
+    .map((slug) => sections.find((s) => s.slug === slug))
+    .filter((s): s is AdminSection => Boolean(s));
+  return { sections, tabs };
+}

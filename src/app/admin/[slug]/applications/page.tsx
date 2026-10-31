@@ -46,7 +46,8 @@ export default async function ApplicationsPage({
   return (
     <>
       <PageHeader title="Applications" subtitle="Drafts are private to participants until submitted." />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
         <FilterLink href={base} active={!current}>
           All
         </FilterLink>
@@ -55,18 +56,41 @@ export default async function ApplicationsPage({
             {f.label}
           </FilterLink>
         ))}
-        <form className="ml-auto" action={base}>
+        </div>
+        <form className="sm:ml-auto" action={base}>
           {current && <input type="hidden" name="status" value={current} />}
           <label htmlFor="q" className="sr-only">
             Search entries
           </label>
-          <input id="q" name="q" defaultValue={sp.q} placeholder="Search entries…" className="input w-56 py-1.5 text-sm" />
+          <input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Search entries…" className="input py-1.5 text-sm sm:w-56" />
         </form>
       </div>
 
       {error && <p className="text-sm text-accent">{error.message}</p>}
       {apps && apps.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <>
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface sm:hidden">
+          {apps.map((a) => (
+            <li key={a.id}>
+              <Link href={`${base}/${a.id}`} className="flex items-start gap-3 px-4 py-3 active:bg-stone-100">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{a.entry_name}</p>
+                  <p className="truncate text-xs text-muted">
+                    {(a.organizations as unknown as { name: string } | null)?.name}
+                    {(a.parade_categories as unknown as { name: string } | null)?.name &&
+                      ` · ${(a.parade_categories as unknown as { name: string }).name}`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {a.participant_count} people · {feet(a.footprint_length_ft)}
+                    {a.submitted_at && ` · ${formatDateTime(a.submitted_at, event.timezone)}`}
+                  </p>
+                </div>
+                <StatusBadge status={a.status as ApplicationStatus} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-stone-50 text-xs text-muted uppercase">
               <tr>
@@ -99,6 +123,7 @@ export default async function ApplicationsPage({
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <EmptyState>
           No applications{statuses.length ? ` with status ${statuses.map((s) => STATUS_LABELS[s]).join(" / ")}` : ""}.
@@ -113,7 +138,7 @@ function FilterLink({ href, active, children }: { href: string; active: boolean;
     <Link
       href={href}
       aria-current={active ? "true" : undefined}
-      className={`rounded-full px-3 py-1 text-sm ${active ? "bg-brand text-white" : "bg-stone-100 hover:bg-stone-200"}`}
+      className={`shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap ${active ? "bg-brand text-white" : "bg-stone-100 hover:bg-stone-200"}`}
     >
       {children}
     </Link>
