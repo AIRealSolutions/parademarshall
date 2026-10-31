@@ -1,4 +1,7 @@
+import Link from "next/link";
 import QRCode from "qrcode";
+import { passUrl } from "@/lib/pass";
+import { siteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffEvent } from "@/lib/data";
 import { isDirector } from "@/lib/domain/roles";
@@ -18,10 +21,11 @@ export default async function PassesPage({ params }: { params: Promise<{ slug: s
     .not("status", "in", "(withdrawn,finished)")
     .order("sequence_number", { ascending: true, nullsFirst: false });
 
+  const origin = await siteOrigin();
   const passes = await Promise.all(
     (units ?? []).map(async (u) => ({
       ...u,
-      svg: await QRCode.toString(u.pass_token, { type: "svg", margin: 1 }),
+      svg: await QRCode.toString(passUrl(u.pass_token, origin), { type: "svg", margin: 1 }),
       place: (u.staging_assignments as unknown as {
         status: string;
         staging_blocks: { block_number: number; staging_lanes: { lane_number: number; staging_zones: { street_name: string } } };
@@ -33,7 +37,12 @@ export default async function PassesPage({ params }: { params: Promise<{ slug: s
     <div>
       <div className="mb-4 flex items-center justify-between print:hidden">
         <h1 className="text-2xl font-semibold">Unit passes</h1>
-        <PrintButton />
+        <div className="flex items-center gap-4">
+          <Link href={`/admin/${slug}/units/signs`} className="text-sm text-brand hover:underline">
+            Dashboard signs (one page per unit) →
+          </Link>
+          <PrintButton />
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 print:grid-cols-3">
         {passes.map((u) => (

@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { siteOrigin } from "@/lib/site-origin";
 import type { ActionResult } from "./result";
 
 type DbError = { message: string } | null;
@@ -167,7 +168,10 @@ export async function approvePlan(eventId: string, kind: "staging" | "route", no
 
 export async function sendArrivalInstructions(eventId: string): Promise<ActionResult<number>> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("queue_assignment_instructions", { p_event_id: eventId });
+  const { data, error } = await supabase.rpc("queue_assignment_instructions", {
+    p_event_id: eventId,
+    p_site_url: await siteOrigin(),
+  });
   return done(error, data as number);
 }
 

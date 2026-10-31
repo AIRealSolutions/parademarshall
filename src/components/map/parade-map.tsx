@@ -35,6 +35,8 @@ export interface ParadeMapProps {
   className?: string;
   /** "staging" zooms to the staging streets; "all" shows the whole route. */
   fit?: "staging" | "all";
+  /** One line drawn prominently, e.g. a participant's staging spot. */
+  highlight?: { geometry: GeoLine; label: string } | null;
 }
 
 const toLatLngs = (g: GeoLine | null | undefined): LatLngTuple[] =>
@@ -82,16 +84,18 @@ export default function ParadeMap({
   draw,
   className = "h-[28rem]",
   fit = "staging",
+  highlight = null,
 }: ParadeMapProps) {
   // Staging views zoom to the staging streets; route views show the whole route.
   const bounds = useMemo(() => {
     const pts: LatLngTuple[] = [];
+    if (highlight) pts.push(...toLatLngs(highlight.geometry));
     layout?.zones.forEach((z) => pts.push(...toLatLngs(z.geometry)));
     if (fit === "staging" && pts.length > 1) return pts;
     route.forEach((r) => pts.push(...toLatLngs(r.geometry)));
     checkpoints.forEach((c) => pts.push(pointLatLng(c.geometry)));
     return pts;
-  }, [route, checkpoints, layout, fit]);
+  }, [route, checkpoints, layout, fit, highlight]);
 
   const center: LatLngExpression = bounds[0] ?? [33.9165, -78.0195];
 
@@ -167,6 +171,14 @@ export default function ParadeMap({
             <Tooltip direction="right">{c.name}</Tooltip>
           </CircleMarker>
         ))}
+
+        {highlight && (
+          <Polyline positions={toLatLngs(highlight.geometry)} pathOptions={{ color: "#7c3aed", weight: 10, opacity: 0.9 }}>
+            <Tooltip permanent direction="top">
+              {highlight.label}
+            </Tooltip>
+          </Polyline>
+        )}
 
         {draw && <DrawLayer draw={draw} />}
       </MapContainer>

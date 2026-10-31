@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
+import { passUrl } from "@/lib/pass";
+import { siteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, type ApplicationRow, type VehicleRow } from "@/lib/data";
 import { feet, formatDateTime } from "@/lib/format";
 import { isEditableByParticipant } from "@/lib/domain/applications";
-import { ButtonLink, Card, DefinitionList, Notice, PageHeader, StatusBadge } from "@/components/ui";
+import { ButtonLink, Card, DefinitionList, Notice, PageHeader, StatusBadge, buttonClass } from "@/components/ui";
 import { TransitionButton } from "@/components/transition-button";
 
 export const metadata: Metadata = { title: "Entry" };
@@ -45,11 +47,12 @@ export default async function MyApplication({
   ]);
 
   const showPass = PASS_STATUSES.includes(app.status);
+  const origin = await siteOrigin();
   const passes = showPass
     ? await Promise.all(
         (units ?? []).map(async (u) => ({
           ...u,
-          svg: await QRCode.toString(u.pass_token, { type: "svg", margin: 1, errorCorrectionLevel: "M" }),
+          svg: await QRCode.toString(passUrl(u.pass_token, origin), { type: "svg", margin: 1, errorCorrectionLevel: "M" }),
         })),
       )
     : [];
@@ -101,8 +104,9 @@ export default async function MyApplication({
       {passes.length > 0 && (
         <Card title="Parade-day pass">
           <p className="mb-4 text-sm text-muted">
-            Show this code to a staging marshal when you arrive. It identifies your unit only — it contains no
-            personal information. Screenshots and printouts work too.
+            Show this code to a staging marshal when you arrive. It identifies your unit only and contains no
+            personal information. Open the pass for a printable copy, a full-page dashboard sign for your windshield,
+            and live status on parade night.
           </p>
           <div className="grid gap-6 sm:grid-cols-2">
             {passes.map((u) => {
@@ -121,6 +125,14 @@ export default async function MyApplication({
                       {a.staging_blocks.staging_lanes.lane_number}, block {a.staging_blocks.block_number}
                     </p>
                   )}
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    <Link href={`/pass/${u.pass_token}`} className={buttonClass()}>
+                      Open pass
+                    </Link>
+                    <Link href={`/pass/${u.pass_token}/sign`} className={buttonClass("secondary")}>
+                      Dashboard sign
+                    </Link>
+                  </div>
                 </div>
               );
             })}
