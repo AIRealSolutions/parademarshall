@@ -21,7 +21,7 @@ psql_ -d postgres -c "create database parade_test"
 sed "s/current_database_placeholder/parade_test/" "$here/supabase_shim.sql" | psql_ -d parade_test
 for f in "$root"/supabase/migrations/*.sql; do
   echo "migrate: $(basename "$f")"
-  psql_ -d parade_test -f "$f"
+  psql_ -d parade_test -1 -f "$f"
 done
 echo "seed: seed.sql"
 psql_ -d parade_test -f "$root/supabase/seed.sql"

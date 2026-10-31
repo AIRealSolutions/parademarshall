@@ -17,8 +17,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: "checkpoints", label: "Checkpoints", summary: "Marshal-reported checkpoint passage and route progress." },
   { slug: "safety", label: "Safety & Alerts", summary: "Incidents, restrictions and authorized safety notices." },
   { slug: "communications", label: "Communications", summary: "Email/SMS to participants, staff alerts and public announcements." },
+  { slug: "engagement", label: "Engagement", summary: "Sponsors, People's Choice voting and spectator photo moderation." },
   { slug: "volunteers", label: "Volunteers", summary: "Marshal and volunteer assignments by position." },
   { slug: "reports", label: "Reports", summary: "Participation, dispatch intervals, staging utilization, incidents and year-over-year history." },
   { slug: "settings", label: "Event Settings", summary: "Event status, dates, registration window and defaults." },
-  { slug: "audit", label: "Audit History", roles: ["parade_director", "assistant_director"], summary: "Timestamped record of approvals, assignments and dispatch actions." },
+  { slug: "audit", label: "Audit History", roles: ["parade_director", "assistant_director", "fire_chief", "police_chief"], summary: "Timestamped record of approvals, assignments and dispatch actions." },
 ];
+
+/** The operational sections traffic officers use; the rest hold participant details. */
+export const TRAFFIC_OFFICER_SECTIONS = new Set(["", "staging", "lineup", "dispatch", "checkpoints", "safety"]);

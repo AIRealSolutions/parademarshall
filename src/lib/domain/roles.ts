@@ -6,6 +6,9 @@ export const EVENT_ROLES = [
   "dispatch_controller",
   "checkpoint_marshal",
   "public_safety_liaison",
+  "fire_chief",
+  "police_chief",
+  "traffic_officer",
 ] as const;
 
 export type EventRole = (typeof EVENT_ROLES)[number];
@@ -18,6 +21,9 @@ export const ROLE_LABELS: Record<EventRole, string> = {
   dispatch_controller: "Dispatch Controller",
   checkpoint_marshal: "Checkpoint Marshal",
   public_safety_liaison: "Public Safety Liaison",
+  fire_chief: "Fire Chief",
+  police_chief: "Police Chief",
+  traffic_officer: "Traffic Officer",
 };
 
 export interface StaffAccess {
@@ -33,4 +39,10 @@ export const isDirector = (a: StaffAccess) => has(a, "parade_director", "assista
 export const isChiefDirector = (a: StaffAccess) => has(a, "parade_director");
 export const isReviewer = (a: StaffAccess) =>
   has(a, "parade_director", "assistant_director", "registration_coordinator");
+/** Leadership that may see every record, including audit history (mirrors is_event_overseer). */
+export const isOverseer = (a: StaffAccess) =>
+  has(a, "parade_director", "assistant_director", "fire_chief", "police_chief");
+/** Traffic officers see operations but not participant details (mirrors can_view_participant_details). */
+export const isTrafficOnly = (a: StaffAccess) =>
+  !a.isSystemAdmin && a.roles.length > 0 && a.roles.every((r) => r === "traffic_officer");
 export const isStaff = (a: StaffAccess) => a.isSystemAdmin || a.roles.length > 0;

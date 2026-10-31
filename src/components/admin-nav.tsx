@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_SECTIONS } from "@/lib/admin-nav";
+import { ADMIN_SECTIONS, TRAFFIC_OFFICER_SECTIONS } from "@/lib/admin-nav";
 
 export function AdminNav({ slug, roles, isAdmin }: { slug: string; roles: string[]; isAdmin: boolean }) {
   const pathname = usePathname();
+  const trafficOnly = !isAdmin && roles.length > 0 && roles.every((r) => r === "traffic_officer");
   return (
     <nav aria-label="Staff sections" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
       <ul className="flex gap-1 lg:flex-col">
-        {ADMIN_SECTIONS.filter((s) => isAdmin || !s.roles || s.roles.some((r) => roles.includes(r))).map((s) => {
+        {ADMIN_SECTIONS.filter(
+          (s) =>
+            (isAdmin || !s.roles || s.roles.some((r) => roles.includes(r))) &&
+            (!trafficOnly || TRAFFIC_OFFICER_SECTIONS.has(s.slug)),
+        ).map((s) => {
           const href = `/admin/${slug}${s.slug ? `/${s.slug}` : ""}`;
           const active = s.slug ? pathname.startsWith(href) : pathname === href;
           return (

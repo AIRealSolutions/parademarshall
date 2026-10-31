@@ -9,6 +9,7 @@
   --brand: #1f5134;
   --brand-strong: #163b26;
   --accent: #b3261e;
+  --gold: #f2b705;
 }
 
 @theme inline {
@@ -20,6 +21,7 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-accent: var(--accent);
+  --color-gold: var(--gold);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -39,4 +41,14 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+
+/* Red-and-yellow rear chevrons, as on Southport Tower 361. */
+.chevron-stripe {
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 14px, var(--gold) 14px 28px);
+}
+
+/* Legible text over photos. */
+.photo-scrim {
+  background: linear-gradient(to top, rgb(0 0 0 / 0.78), rgb(0 0 0 / 0.35) 55%, rgb(0 0 0 / 0.1));
 }
