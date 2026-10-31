@@ -1,16 +1,38 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
+// Handles both link styles Supabase can send:
+//  - PKCE:        ?code=...                 (must open in the browser that requested it)
+//  - token hash:  ?token_hash=...&type=...  (works on any device; see README email template)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const code = searchParams.get("code");
-  const nextParam = searchParams.get("next") ?? "/my";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/my";
+  const next = safeNext(searchParams.get("next"));
+  const fail = (reason: string) =>
+    NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(reason)}&next=${encodeURIComponent(next)}`);
 
+  const providerError = searchParams.get("error_description") ?? searchParams.get("error");
+  if (providerError) return fail(providerError);
+
+  const supabase = await createClient();
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as EmailOtpType | null;
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    return error ? fail(error.message) : NextResponse.redirect(`${origin}${next}`);
+  }
+
+  const code = searchParams.get("code");
   if (code) {
-    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${next}`);
+    // The usual cause: the link was opened in a different browser or app than the one that asked for it.
+    return fail(
+      /verifier/i.test(error.message)
+        ? "This link was opened in a different browser than the one you signed in from. Enter the 6-digit code from the email instead, or request a new link and open it in the same browser."
+        : error.message,
+    );
   }
-  return NextResponse.redirect(`${origin}/login?error=link`);
+  return fail("The sign-in link was incomplete. Request a new one.");
 }
