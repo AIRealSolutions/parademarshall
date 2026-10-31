@@ -10,7 +10,8 @@ Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Post
 | --- | --- |
 | Registration with drafts, vehicles, footprint, waiver and QR pass (FR-02) | `/events/[slug]/register`, `/my` |
 | Application review with role-aware transitions (FR-02) | Staff → Applications |
-| Unit registry: split multi-vehicle entries, reissue passes, print passes | Staff → Unit Registry |
+| Unit registry: split multi-vehicle entries, reissue passes, print passes and every unit's dashboard sign | Staff → Unit Registry |
+| Participant parade-day kit: public pass page (QR, lineup number, staging spot and map, live status, what to expect), printable pass, full-page landscape windshield sign, save-as-image; pass link included in arrival emails | `/pass/[token]`, `/pass/[token]/sign` |
 | Staging map editor: draw streets, route and checkpoints; edit blocks and lanes; place units by measured footprint; live conflict checks; restrictions; plan approval with versioning; arrival instructions (FR-03, FR-04) | Staff → Staging Map |
 | Lineup builder: drag-and-drop or keyboard reordering, final unit, feasibility warnings (lane order, consecutive bands, split groups), publish to spectators (FR-05) | Staff → Lineup Builder |
 | Dispatch center: single active authorization, release, revoke, hold/skip, parade-wide hold, conflict resolution, live via Supabase Realtime (FR-06) | Staff → Dispatch Center |

@@ -6,6 +6,7 @@ import { useLiveData } from "@/components/use-live-data";
 import { useOfflineQueue } from "@/components/marshal/use-offline-queue";
 import { ConnectionBar, QueueList, SyncBadge } from "@/components/marshal/sync-badge";
 import { QrScanner } from "@/components/marshal/qr-scanner";
+import { extractPassToken } from "@/lib/pass";
 
 interface Unit {
   id: string;
@@ -77,7 +78,13 @@ export function CheckInApp({ eventId }: { eventId: string }) {
   const selected = units?.find((u) => u.id === selectedId) ?? null;
   const statusOf = (u: Unit) => (localStatus.get(u.id)?.state === "pending" ? localStatus.get(u.id)!.status : u.status);
 
-  function onScan(token: string) {
+  function onScan(scanned: string) {
+    // Passes encode a link to the pass page; older printouts hold the bare token.
+    const token = extractPassToken(scanned);
+    if (!token) {
+      setScanMiss("That QR code isn't a parade pass.");
+      return;
+    }
     const u = units?.find((x) => x.pass_token === token);
     if (u) {
       setSelectedId(u.id);
