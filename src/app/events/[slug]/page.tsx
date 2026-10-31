@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Image from "next/image";
 import Link from "next/link";
+import { photos as sitePhotos } from "@/lib/images";
 import { getEventBySlug, getUser, registrationOpen, votingOpen } from "@/lib/data";
 import { signedPhotoUrls } from "@/lib/photos";
 import { PublicLineup } from "@/components/public/public-lineup";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { ButtonLink, Card, EmptyState, Notice } from "@/components/ui";
+import { Card, EmptyState, Notice } from "@/components/ui";
 import { ParadeMap } from "@/components/map";
 import { AutoRefresh } from "@/components/auto-refresh";
 import type { GeoLine, GeoPoint } from "@/lib/domain/staging";
@@ -102,19 +104,37 @@ export default async function EventPortal({ params }: { params: Promise<{ slug: 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
       {(event.status === "live" || event.parade_hold) && <AutoRefresh seconds={30} />}
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-brand">{event.municipality}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {event.year} {event.name}
-        </h1>
-        <p className="text-muted">
-          {event.starts_at ? formatDateTime(event.starts_at, event.timezone) : "Date and time to be announced"}
-        </p>
-        {registrationOpen(event) && (
-          <div className="pt-2">
-            <ButtonLink href={`/events/${slug}/register`}>Register a parade entry</ButtonLink>
-          </div>
-        )}
+      <header className="relative isolate -mx-4 overflow-hidden bg-black sm:mx-0 sm:rounded-xl">
+        <Image
+          src={sitePhotos.ladderRides.src}
+          alt={sitePhotos.ladderRides.alt}
+          placeholder="blur"
+          priority
+          fill
+          sizes="(min-width: 1152px) 1152px, 100vw"
+          className="-z-10 object-cover"
+        />
+        <div className="photo-scrim absolute inset-0 -z-10" aria-hidden />
+        <div className="flex min-h-64 flex-col justify-end space-y-2 p-5 text-white sm:min-h-80 sm:p-8">
+          <p className="text-sm font-semibold tracking-wide text-gold uppercase">{event.municipality}</p>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {event.year} {event.name}
+          </h1>
+          <p className="text-white/85">
+            {event.starts_at ? formatDateTime(event.starts_at, event.timezone) : "Date and time to be announced"}
+          </p>
+          {registrationOpen(event) && (
+            <div className="pt-2">
+              <Link
+                href={`/events/${slug}/register`}
+                className="inline-flex min-h-11 items-center rounded-md bg-accent px-5 font-semibold text-white hover:bg-red-800"
+              >
+                Register a parade entry
+              </Link>
+            </div>
+          )}
+        </div>
+        <div className="chevron-stripe h-1.5" aria-hidden />
       </header>
 
       {event.parade_hold && (

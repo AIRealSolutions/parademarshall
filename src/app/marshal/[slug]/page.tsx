@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { photos } from "@/lib/images";
 import { requireStaffEvent } from "@/lib/data";
 import { ROLE_LABELS } from "@/lib/domain/roles";
 
@@ -41,6 +43,10 @@ export default async function MarshalModes({ params }: { params: Promise<{ slug:
 
   return (
     <div className="space-y-3">
+      <div className="relative h-36 overflow-hidden rounded-xl">
+        <Image src={photos.staging.src} alt={photos.staging.alt} placeholder="blur" fill sizes="(min-width: 576px) 576px, 100vw" className="object-cover" priority />
+        <div className="chevron-stripe absolute inset-x-0 bottom-0 h-1.5" aria-hidden />
+      </div>
       <p className="text-sm text-muted">{access.roles.map((r) => ROLE_LABELS[r]).join(", ") || "System Administrator"}</p>
       {modes.map((m) => (
         <Link key={m.title} href={m.href} className="block rounded-xl border border-border bg-surface p-5 active:bg-stone-100">

@@ -1,13 +1,15 @@
+import Image from "next/image";
 import Link from "next/link";
+import icon from "@/app/icon.png";
 import { getUser } from "@/lib/data";
 
 export async function SiteHeader() {
   const user = await getUser();
   return (
-    <header className="border-b border-border bg-surface print:hidden">
+    <header className="bg-surface print:hidden">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2 font-semibold text-brand">
-          <span aria-hidden className="inline-block h-3 w-3 rounded-full bg-accent" />
+          <Image src={icon} alt="" width={28} height={28} className="rounded-md" priority />
           Parade Marshal
         </Link>
         <nav className="flex items-center gap-4 text-sm">
@@ -33,6 +35,7 @@ export async function SiteHeader() {
           )}
         </nav>
       </div>
+      <div className="chevron-stripe h-1.5" aria-hidden />
     </header>
   );
 }
