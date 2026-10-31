@@ -51,7 +51,16 @@ npm run dev
 1. Create a Supabase project.
 2. Apply the migrations in `supabase/migrations/` in order, using `supabase db push` or the SQL editor. Then run `supabase/seed.sql` to load the Southport 2026 event.
 3. In **Auth → URL Configuration**, add `https://<your-domain>/auth/callback` (and `http://localhost:3000/auth/callback`) to the redirect URLs.
-4. Sign in once through the app, then make yourself the administrator and director:
+4. In **Auth → Email Templates → Magic Link**, use a template that works on any device and includes a code:
+
+```html
+<h2>Sign in to Parade Marshal</h2>
+<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/my">Sign in</a></p>
+<p>Or enter this code: <strong>{{ .Token }}</strong></p>
+```
+
+   Set **Site URL** to your production address (e.g. `https://parademarshall.vercel.app`). The default template's link only works when opened in the same browser that requested it. The code works anywhere.
+5. Sign in once through the app, then make yourself the administrator and director:
 
 ```sql
 update public.profiles set is_system_admin = true where email = 'you@example.com';

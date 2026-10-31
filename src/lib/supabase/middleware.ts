@@ -5,6 +5,16 @@ import { supabaseEnv } from "./env";
 const PROTECTED_PREFIXES = ["/admin", "/my", "/marshal"];
 
 export async function updateSession(request: NextRequest) {
+  // If Supabase falls back to the Site URL (e.g. the callback URL isn't in the
+  // allow list), the auth code lands on some other page. Send it to the callback.
+  const { pathname, searchParams } = request.nextUrl;
+  if (!pathname.startsWith("/auth/") && (searchParams.has("code") || searchParams.has("token_hash"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    if (!url.searchParams.has("next")) url.searchParams.set("next", pathname === "/" ? "/my" : pathname);
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
   const { url, key } = supabaseEnv();
 

@@ -10,11 +10,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="mx-auto max-w-md px-4 py-10">
       <Card title="Sign in">
         <p className="mb-4 text-sm text-muted">
-          Participants and staff sign in with a one-time link sent by email. No password needed. Spectators do not
-          need an account.
+          Participants and staff sign in with a one-time link or code sent by email. No password needed. Spectators do
+          not need an account.
         </p>
-        {error && <p className="mb-4 text-sm text-accent">That sign-in link was invalid or expired. Try again.</p>}
-        <LoginForm next={next ?? "/my"} />
+        <LoginForm next={next ?? "/my"} initialError={error === "link" ? "That sign-in link was invalid or expired." : error} />
       </Card>
     </main>
   );
