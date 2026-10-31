@@ -22,12 +22,17 @@ export default async function MarshalModes({ params }: { params: Promise<{ slug:
       title: "Dispatch",
       body: "Authorize and release units at the merge.",
     },
-    has("fire_chief", "public_safety_liaison", "assistant_director") && {
+    has("traffic_officer", "police_chief", "fire_chief", "public_safety_liaison", "parade_director", "assistant_director", "dispatch_controller") && {
+      href: `/marshal/${slug}/traffic`,
+      title: "Traffic control",
+      body: "Parade head and tail, which stretches are clear, road closures and the parade hold.",
+    },
+    has("fire_chief", "police_chief", "public_safety_liaison", "assistant_director") && {
       href: `/admin/${slug}/dispatch`,
       title: "Live operations",
       body: "Watch dispatch, the parade hold and every unit's status in real time.",
     },
-    has("fire_chief", "public_safety_liaison", "parade_director", "assistant_director") && {
+    has("fire_chief", "police_chief", "traffic_officer", "public_safety_liaison", "parade_director", "assistant_director") && {
       href: `/admin/${slug}/safety`,
       title: "Safety & incidents",
       body: "Open incidents, street restrictions and safety notices.",

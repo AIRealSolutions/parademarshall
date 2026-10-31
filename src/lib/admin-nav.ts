@@ -21,5 +21,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: "volunteers", label: "Volunteers", summary: "Marshal and volunteer assignments by position." },
   { slug: "reports", label: "Reports", summary: "Participation, dispatch intervals, staging utilization, incidents and year-over-year history." },
   { slug: "settings", label: "Event Settings", summary: "Event status, dates, registration window and defaults." },
-  { slug: "audit", label: "Audit History", roles: ["parade_director", "assistant_director", "fire_chief"], summary: "Timestamped record of approvals, assignments and dispatch actions." },
+  { slug: "audit", label: "Audit History", roles: ["parade_director", "assistant_director", "fire_chief", "police_chief"], summary: "Timestamped record of approvals, assignments and dispatch actions." },
 ];
+
+/** The operational sections traffic officers use; the rest hold participant details. */
+export const TRAFFIC_OFFICER_SECTIONS = new Set(["", "staging", "lineup", "dispatch", "checkpoints", "safety"]);

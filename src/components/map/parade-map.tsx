@@ -33,6 +33,8 @@ export interface ParadeMapProps {
   onSelectBlock?: (blockId: string) => void;
   draw?: DrawState | null;
   className?: string;
+  /** "staging" zooms to the staging streets; "all" shows the whole route. */
+  fit?: "staging" | "all";
 }
 
 const toLatLngs = (g: GeoLine | null | undefined): LatLngTuple[] =>
@@ -79,16 +81,17 @@ export default function ParadeMap({
   onSelectBlock,
   draw,
   className = "h-[28rem]",
+  fit = "staging",
 }: ParadeMapProps) {
   // Staging views zoom to the staging streets; route views show the whole route.
   const bounds = useMemo(() => {
     const pts: LatLngTuple[] = [];
     layout?.zones.forEach((z) => pts.push(...toLatLngs(z.geometry)));
-    if (pts.length > 1) return pts;
+    if (fit === "staging" && pts.length > 1) return pts;
     route.forEach((r) => pts.push(...toLatLngs(r.geometry)));
     checkpoints.forEach((c) => pts.push(pointLatLng(c.geometry)));
     return pts;
-  }, [route, checkpoints, layout]);
+  }, [route, checkpoints, layout, fit]);
 
   const center: LatLngExpression = bounds[0] ?? [33.9165, -78.0195];
 
