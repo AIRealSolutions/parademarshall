@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseEnv } from "@/lib/supabase/env";
 import { safeNext } from "@/lib/safe-next";
 
 export interface LoginState {
@@ -21,7 +23,14 @@ export async function sendMagicLink(_prev: LoginState, formData: FormData): Prom
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? `${h.get("x-forwarded-proto") ?? "https"}://${host}`;
   const next = safeNext(formData.get("next"));
 
-  const supabase = await createClient();
+  // Send with the implicit flow: the link then carries the session itself and works
+  // in any browser or device. (The SSR client forces PKCE, whose links only work in
+  // the browser that requested them. Supabase's default email template can't be
+  // changed without custom SMTP, so the link format has to work as sent.)
+  const { url, key } = supabaseEnv();
+  const supabase = createPlainClient(url, key, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
   const { error } = await supabase.auth.signInWithOtp({
     email: email.data,
     options: {

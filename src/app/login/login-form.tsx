@@ -23,8 +23,8 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     return (
       <div className="space-y-4">
         <Notice tone="good">
-          We emailed <strong>{sentTo}</strong>. Open the link <em>in this browser</em>, or enter the code from the email
-          below.
+          We emailed <strong>{sentTo}</strong>. Tap the link in the email. If your email shows a code, you can enter it
+          below instead.
         </Notice>
         <form action={verify} className="space-y-3">
           <input type="hidden" name="email" value={sentTo} />

@@ -3,9 +3,10 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
 
-// Handles both link styles Supabase can send:
+// Handles every link style Supabase can send:
+//  - token hash:  ?token_hash=...&type=...  (custom email template; works on any device)
 //  - PKCE:        ?code=...                 (must open in the browser that requested it)
-//  - token hash:  ?token_hash=...&type=...  (works on any device; see README email template)
+//  - implicit:    #access_token=...         (default template; finished in /auth/complete)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const next = safeNext(searchParams.get("next"));
@@ -34,5 +35,7 @@ export async function GET(request: NextRequest) {
         : error.message,
     );
   }
-  return fail("The sign-in link was incomplete. Request a new one.");
+  // Implicit-flow links put the session in the URL fragment, which only the browser
+  // can read. The fragment survives this redirect, so the client page finishes sign-in.
+  return NextResponse.redirect(`${origin}/auth/complete?next=${encodeURIComponent(next)}`);
 }
