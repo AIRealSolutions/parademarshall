@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffEvent } from "@/lib/data";
-import { isDirector } from "@/lib/domain/roles";
+import { isOverseer } from "@/lib/domain/roles";
 import { AuditList, type AuditRow } from "@/components/audit-list";
 import { Card, Notice, PageHeader } from "@/components/ui";
 
@@ -26,8 +26,8 @@ export default async function AuditPage({
   const { slug } = await params;
   const { table } = await searchParams;
   const { event, access } = await requireStaffEvent(slug);
-  if (!isDirector(access)) {
-    return <Notice tone="warn">Audit history is available to the Parade Director and Assistant Director.</Notice>;
+  if (!isOverseer(access)) {
+    return <Notice tone="warn">Audit history is available to the Parade Director, Assistant Director and Fire Chief.</Notice>;
   }
 
   const supabase = await createClient();

@@ -24,6 +24,7 @@ Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Post
 | Spectator page: route map, published lineup, approximate progress, announcements, favorites (on device), People's Choice voting, sponsors, photo gallery (FR-08) | `/events/[slug]`, `/events/[slug]/photos` |
 | Sponsors, voting window and results, photo moderation (FR-08 enhancements) | Staff → Engagement |
 | Audit history (§6) | Staff → Audit History |
+| Fire Chief role: read-only view of everything (dispatch, staging, incidents, audit, delivery log); combine with Public Safety Liaison for hold and emergency-notice authority | Staff → Volunteers → Add staff |
 
 Not yet built: payment processing (fees are disabled by policy) and participant-uploaded entry media.
 

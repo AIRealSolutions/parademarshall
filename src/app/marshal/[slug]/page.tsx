@@ -22,13 +22,23 @@ export default async function MarshalModes({ params }: { params: Promise<{ slug:
       title: "Dispatch",
       body: "Authorize and release units at the merge.",
     },
+    has("fire_chief", "public_safety_liaison", "assistant_director") && {
+      href: `/admin/${slug}/dispatch`,
+      title: "Live operations",
+      body: "Watch dispatch, the parade hold and every unit's status in real time.",
+    },
+    has("fire_chief", "public_safety_liaison", "parade_director", "assistant_director") && {
+      href: `/admin/${slug}/safety`,
+      title: "Safety & incidents",
+      body: "Open incidents, street restrictions and safety notices.",
+    },
   ].filter(Boolean) as { href: string; title: string; body: string }[];
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted">{access.roles.map((r) => ROLE_LABELS[r]).join(", ") || "System Administrator"}</p>
       {modes.map((m) => (
-        <Link key={m.href} href={m.href} className="block rounded-xl border border-border bg-surface p-5 active:bg-stone-100">
+        <Link key={m.title} href={m.href} className="block rounded-xl border border-border bg-surface p-5 active:bg-stone-100">
           <p className="text-xl font-semibold">{m.title}</p>
           <p className="mt-1 text-sm text-muted">{m.body}</p>
         </Link>
