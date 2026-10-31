@@ -66,6 +66,14 @@ export default async function ApplicationReview({ params }: { params: Promise<{ 
 
       <div className="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
+          {/* On phones and tablets, review actions come first instead of after the details. */}
+          {transitions.length > 0 && (
+            <div className="xl:hidden">
+              <Card title="Review">
+                <ReviewPanel applicationId={app.id} status={app.status} transitions={transitions} />
+              </Card>
+            </div>
+          )}
           {app.status_note && (
             <Notice tone="info">
               <span className="font-medium">Latest note:</span> {app.status_note}
@@ -150,9 +158,11 @@ export default async function ApplicationReview({ params }: { params: Promise<{ 
         </div>
 
         <div className="space-y-6">
-          <Card title="Review">
-            <ReviewPanel applicationId={app.id} status={app.status} transitions={transitions} />
-          </Card>
+          <div className={transitions.length > 0 ? "hidden xl:block" : undefined}>
+            <Card title="Review">
+              <ReviewPanel applicationId={app.id} status={app.status} transitions={transitions} />
+            </Card>
+          </div>
           {units && units.length > 0 && (
             <Card title="Parade units">
               <ul className="space-y-2 text-sm">

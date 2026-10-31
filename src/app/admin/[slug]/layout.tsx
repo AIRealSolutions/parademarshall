@@ -1,6 +1,6 @@
 import { requireStaffEvent } from "@/lib/data";
 import { ROLE_LABELS } from "@/lib/domain/roles";
-import { AdminNav } from "@/components/admin-nav";
+import { AdminNav, AdminTabBar } from "@/components/admin-nav";
 
 export default async function AdminLayout({
   children,
@@ -16,24 +16,25 @@ export default async function AdminLayout({
     : access.roles.map((r) => ROLE_LABELS[r]).join(", ");
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 print:max-w-none print:p-0">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3 print:hidden">
-        <p className="font-semibold">
+    <div className="mx-auto max-w-7xl px-4 pt-4 pb-28 lg:py-6 print:max-w-none print:p-0">
+      <div className="mb-4 flex items-baseline justify-between gap-2 border-b border-border pb-3 print:hidden">
+        <p className="min-w-0 truncate font-semibold">
           {event.year} {event.name}
         </p>
-        <p className="text-xs text-muted">{roleText}</p>
+        <p className="hidden text-xs text-muted sm:block">{roleText}</p>
       </div>
       {event.parade_hold && (
         <div className="mb-4 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-white print:hidden" role="status">
-          PARADE-WIDE HOLD IN EFFECT{event.parade_hold_reason ? ` — ${event.parade_hold_reason}` : ""}
+          PARADE-WIDE HOLD IN EFFECT{event.parade_hold_reason ? `: ${event.parade_hold_reason}` : ""}
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-[14rem_1fr] print:block">
-        <aside className="print:hidden">
+        <aside className="hidden lg:block print:hidden">
           <AdminNav slug={slug} roles={access.roles} isAdmin={access.isSystemAdmin} />
         </aside>
         <main className="min-w-0">{children}</main>
       </div>
+      <AdminTabBar slug={slug} roles={access.roles} isAdmin={access.isSystemAdmin} />
     </div>
   );
 }
