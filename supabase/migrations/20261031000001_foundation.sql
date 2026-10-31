@@ -696,7 +696,7 @@ create table public.publications (
 create table public.audit_logs (
   id bigint generated always as identity primary key,
   event_id uuid,
-  actor_id uuid,
+  actor_id uuid references public.profiles (id) on delete set null,
   table_name text not null,
   record_id uuid,
   action text not null,
@@ -875,9 +875,9 @@ create policy applications_update on public.applications for update to authentic
        and status in ('draft', 'needs_information'))
     or public.is_event_reviewer(event_id)
   )
+  -- An owner may only keep the entry under an organization they belong to.
   with check (
-    ((submitted_by = auth.uid() or public.is_org_member(organization_id))
-       and status in ('draft', 'needs_information'))
+    (public.is_org_member(organization_id) and status in ('draft', 'needs_information'))
     or public.is_event_reviewer(event_id)
   );
 create policy applications_delete on public.applications for delete to authenticated

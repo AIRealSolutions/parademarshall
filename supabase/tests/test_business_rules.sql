@@ -75,6 +75,14 @@ update public.applications
    set waiver_id = (select id from public.waivers where event_id = '00000000-0000-4000-8000-000000002026'),
        waiver_accepted_at = now(), waiver_accepted_name = 'Pat Lee'
  where id = test.id('app1');
+-- An editable entry cannot be moved to an organization the participant doesn't belong to.
+reset role;
+insert into public.organizations (id, name, created_by)
+values ('40000000-0000-4000-8000-000000000001', 'Someone Else Inc', '10000000-0000-4000-8000-000000000005');
+set role authenticated;
+select test.expect_error($$update public.applications set organization_id = '40000000-0000-4000-8000-000000000001'
+  where id = test.id('app1')$$, 'row-level security');
+
 select public.transition_application(test.id('app1'), 'submitted');
 
 -- Participants cannot self-approve.
@@ -105,7 +113,7 @@ select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000005
 set role authenticated;
 do $$ begin
   assert (select count(*) from public.applications) = 0, 'stranger sees applications';
-  assert (select count(*) from public.organizations) = 0, 'stranger sees organizations';
+  assert (select count(*) from public.organizations where name <> 'Someone Else Inc') = 0, 'stranger sees organizations';
   assert (select count(*) from public.staging_zones) = 0, 'stranger sees staging';
 end $$;
 select test.expect_error($$select public.transition_application(test.id('app1'), 'under_review')$$, 'not permitted');
