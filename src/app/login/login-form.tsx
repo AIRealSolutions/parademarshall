@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { Field, Notice, buttonClass } from "@/components/ui";
-import { sendMagicLink, verifyEmailCode, type LoginState } from "./actions";
+import { sendMagicLink, signInWithPassword, verifyEmailCode, type LoginState } from "./actions";
 
 export function LoginForm({ next, initialError }: { next: string; initialError?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(sendMagicLink, {});
   const [codeState, verify, verifying] = useActionState<LoginState, FormData>(verifyEmailCode, {});
+  const [pwState, pwAction, pwPending] = useActionState<LoginState, FormData>(signInWithPassword, {});
+  const [usePassword, setUsePassword] = useState(false);
   const [hashError, setHashError] = useState<string | null>(null);
 
   // Supabase reports some link failures (e.g. expired or already used) in the URL fragment.
@@ -23,8 +25,8 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     return (
       <div className="space-y-4">
         <Notice tone="good">
-          We emailed <strong>{sentTo}</strong>. Open the link <em>in this browser</em>, or enter the code from the email
-          below.
+          We emailed <strong>{sentTo}</strong>. Tap the link in the email. If your email shows a code, you can enter it
+          below instead.
         </Notice>
         <form action={verify} className="space-y-3">
           <input type="hidden" name="email" value={sentTo} />
@@ -49,6 +51,27 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     );
   }
 
+  if (usePassword) {
+    return (
+      <form action={pwAction} className="space-y-4">
+        <input type="hidden" name="next" value={next} />
+        <Field label="Email" htmlFor="pw-email" required>
+          <input id="pw-email" name="email" type="email" autoComplete="email" required className="input" />
+        </Field>
+        <Field label="Password" htmlFor="password" required>
+          <input id="password" name="password" type="password" autoComplete="current-password" required className="input" />
+        </Field>
+        {pwState.error && <Notice tone="bad">{pwState.error}</Notice>}
+        <button className={`${buttonClass()} w-full`} disabled={pwPending}>
+          {pwPending ? "Signing in…" : "Sign in"}
+        </button>
+        <button type="button" className="w-full text-sm text-brand hover:underline" onClick={() => setUsePassword(false)}>
+          Email me a sign-in link instead
+        </button>
+      </form>
+    );
+  }
+
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
@@ -66,6 +89,9 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
       )}
       <button className={`${buttonClass()} w-full`} disabled={pending}>
         {pending ? "Sending…" : "Email me a sign-in link"}
+      </button>
+      <button type="button" className="w-full text-sm text-brand hover:underline" onClick={() => setUsePassword(true)}>
+        Sign in with a password
       </button>
     </form>
   );
