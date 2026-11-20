@@ -357,7 +357,7 @@ begin
                           'Southport Christmas Parade', 2027);
   assert (select count(*) from public.staging_zones where event_id = v.id) = 6;
   assert (select count(*) from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 35;
+          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 37;
   -- Side streets still feed the new event's own Bay Street zones.
   assert (select count(*) from public.staging_zones z join public.staging_zones f on f.id = z.feeds_into_zone_id
           where z.event_id = v.id and f.event_id = v.id and f.code = 'EBAY') = 2;

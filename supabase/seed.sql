@@ -88,10 +88,14 @@ on conflict do nothing;
 -- East of Howe, Atlantic and Rhett turn right (west) onto East Bay Street,
 -- where the main lineup extends. Both streams meet at the single merge.
 --
--- Zone geometry is drawn starting at the end nearest the merge: each Bay
--- Street zone from Howe St outward, each side street from its Bay St corner
--- northward. Coordinates are PLACEHOLDERS; redraw them on the Staging Map
--- before approving the plan.
+-- Geometry follows the approved staging diagram, anchored at the Bay St /
+-- S Howe St merge (-78.01985, 33.91620): Bay Street is drawn straight
+-- east-west and each side street straight north from its Bay St corner, at
+-- the diagram's spacing (about 1 m per diagram unit). Each zone starts at the
+-- end nearest the merge. The diagram is schematic, so these lines may not sit
+-- exactly on the real curbs: adjust them on the Staging Map and mark them
+-- field-validated before approving the plan. Block lengths are sized to fill
+-- each line.
 --
 -- Re-running this file reconciles the layout. A street that already has units
 -- placed on it (or ever had) keeps its lanes and blocks and is reported with
@@ -127,38 +131,38 @@ begin
     ('SCASWELL', 'South Caswell Avenue',
      'Westernmost staging street. Vehicles staged facing south; turn left (east) onto West Bay Street.',
      'general'::public.zone_use,
-     'LINESTRING(-78.02420 33.91610, -78.02430 33.91830)',
-     'southbound'::public.compass_direction, 1, 3, 280::numeric, 10::numeric, 1, 'WBAY',
+     'LINESTRING(-78.02420 33.91620, -78.02420 33.91838)',
+     'southbound'::public.compass_direction, 1, 3, 265::numeric, 10::numeric, 1, 'WBAY',
      'South to Bay St, left onto West Bay, east to Howe St.'),
     ('SLORD', 'South Lord Street',
      'Two lanes of southbound traffic, between Caswell and Howe. Both lanes turn left (east) onto West Bay Street.',
      'general'::public.zone_use,
-     'LINESTRING(-78.02200 33.91615, -78.02210 33.91830)',
-     'southbound'::public.compass_direction, 2, 3, 260::numeric, 10::numeric, 2, 'WBAY',
+     'LINESTRING(-78.02202 33.91620, -78.02202 33.91838)',
+     'southbound'::public.compass_direction, 2, 3, 265::numeric, 10::numeric, 2, 'WBAY',
      'Two lanes south to Bay St, left onto West Bay, east to Howe St.'),
     ('WBAY', 'West Bay Street',
      'Carries Caswell and Lord traffic east to the merge at South Howe Street.',
      'general'::public.zone_use,
-     'LINESTRING(-78.01985 33.91620, -78.02420 33.91610)',
-     'eastbound'::public.compass_direction, 2, 4, 300::numeric, 11::numeric, 3, null::text,
+     'LINESTRING(-78.01985 33.91620, -78.02534 33.91620)',
+     'eastbound'::public.compass_direction, 2, 5, 330::numeric, 11::numeric, 3, null::text,
      'East on Bay St to the Bay St / S Howe St merge.'),
     ('EBAY', 'East Bay Street',
      'Main lineup. Units face west toward South Howe Street; the front is nearest the merge. Atlantic and Rhett empty onto it.',
      'general'::public.zone_use,
-     'LINESTRING(-78.01985 33.91620, -78.01380 33.91595)',
-     'westbound'::public.compass_direction, 2, 6, 300::numeric, 11::numeric, 4, null::text,
+     'LINESTRING(-78.01985 33.91620, -78.01436 33.91620)',
+     'westbound'::public.compass_direction, 2, 6, 275::numeric, 11::numeric, 4, null::text,
      'West on Bay St to the Bay St / S Howe St merge.'),
     ('SATLANTIC', 'South Atlantic Avenue',
      'East of Howe. Vehicles staged facing south; turn right (west) onto East Bay Street.',
      'general'::public.zone_use,
-     'LINESTRING(-78.01700 33.91610, -78.01690 33.91830)',
-     'southbound'::public.compass_direction, 1, 3, 260::numeric, 10::numeric, 5, 'EBAY',
+     'LINESTRING(-78.01790 33.91620, -78.01790 33.91838)',
+     'southbound'::public.compass_direction, 1, 3, 265::numeric, 10::numeric, 5, 'EBAY',
      'South to Bay St, right onto East Bay, west to Howe St.'),
     ('SRHETT', 'South Rhett Street',
      'Easternmost staging street. Vehicles staged facing south; turn right (west) onto East Bay Street.',
      'general'::public.zone_use,
-     'LINESTRING(-78.01450 33.91598, -78.01440 33.91830)',
-     'southbound'::public.compass_direction, 1, 3, 260::numeric, 10::numeric, 6, 'EBAY',
+     'LINESTRING(-78.01573 33.91620, -78.01573 33.91838)',
+     'southbound'::public.compass_direction, 1, 3, 265::numeric, 10::numeric, 6, 'EBAY',
      'South to Bay St, right onto East Bay, west to Howe St.')
   ) as t(code, street, descr, use, wkt, dir, lanes, blocks, block_len, width, sort, feeds, flow)
   loop
@@ -213,7 +217,7 @@ begin
   from public.staging_blocks bl
   join public.staging_lanes l on l.id = bl.lane_id
   join public.staging_zones sz on sz.id = l.zone_id
-  where sz.event_id = v_event and sz.code = 'WBAY' and bl.block_number = 4
+  where sz.event_id = v_event and sz.code = 'WBAY' and bl.block_number = 5
     and not exists (select 1 from public.restrictions r
                     where r.event_id = v_event and r.reason like 'Shoreline construction%');
 end $$;
