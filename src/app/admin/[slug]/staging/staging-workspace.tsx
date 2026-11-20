@@ -10,6 +10,7 @@ import {
   STATUS_LABELS,
   checkPlacement,
   firstFreeOffset,
+  flowExit,
   flowTree,
   reservedLength,
   type FlowNode,
@@ -165,7 +166,7 @@ export function StagingWorkspace({
                   ? "drag the point, or tap the map to place it."
                   : draw.start
                     ? `drag a purple point to move it, drag a white dot to add a point, tap a point to remove it (${draw.points.length} points).`
-                    : `click to add points${draw.kind === "zone" ? ", starting at the end nearest the merge" : ""} (${draw.points.length}).`}
+                    : `click to add points${draw.kind === "zone" ? ", starting at the end units leave from" : ""} (${draw.points.length}).`}
               </span>
               <span className="ml-auto flex gap-2">
                 {draw.mode === "line" && !draw.start && (
@@ -719,7 +720,7 @@ export function RestrictionForm({
 }
 
 function TrafficFlow({ layout }: { layout: StagingLayout }) {
-  const merge = layout.checkpoints.find((c) => c.is_merge_point);
+  const exit = flowExit(layout.checkpoints);
   const roots = flowTree(layout.zones);
   if (layout.zones.length === 0) return null;
   const lanes = (n: FlowNode) => (n.zone.lanes.length > 1 ? ` (${n.zone.lanes.length} lanes)` : "");
@@ -735,8 +736,8 @@ function TrafficFlow({ layout }: { layout: StagingLayout }) {
   );
   return (
     <section className="rounded-md border border-border bg-surface p-2 text-xs">
-      <h3 className="mb-1 font-semibold">Traffic flow to the merge</h3>
-      <p className="font-medium">{merge?.name ?? "Merge"}</p>
+      <h3 className="mb-1 font-semibold">Traffic flow</h3>
+      <p className="font-medium">{exit}</p>
       {render(roots)}
     </section>
   );
@@ -757,7 +758,7 @@ function LayoutTab({
   onDraw: (t: DrawTarget) => void;
   action: Action;
 }) {
-  const merge = layout.checkpoints.find((c) => c.is_merge_point);
+  const exit = flowExit(layout.checkpoints);
   return (
     <div className="space-y-5 text-sm">
       <TrafficFlow layout={layout} />
@@ -781,7 +782,7 @@ function LayoutTab({
                   action.run(() => setZoneFlow(z.id, e.target.value || null), `${z.street_name} flow updated.`)
                 }
               >
-                <option value="">{merge ? `${merge.name}` : "The merge"}</option>
+                <option value="">{exit}</option>
                 {layout.zones
                   .filter((o) => o.id !== z.id)
                   .map((o) => (
@@ -791,7 +792,7 @@ function LayoutTab({
                   ))}
               </select>
             ) : (
-              <span>{z.feeds_into ?? merge?.name ?? "The merge"}</span>
+              <span>{z.feeds_into ?? exit}</span>
             )}
           </label>
           {z.flow_notes && <p className="text-xs text-muted">{z.flow_notes}</p>}

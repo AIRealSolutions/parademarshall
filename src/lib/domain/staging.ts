@@ -287,3 +287,14 @@ export function flowTree<Z extends Pick<LayoutZone, "id" | "street_name" | "feed
     .filter((z) => !z.feeds_into_zone_id || !ids.has(z.feeds_into_zone_id))
     .map((z) => build(z, new Set([z.id])));
 }
+
+/**
+ * Where a street with no "feeds into" leads: the first checkpoint after the
+ * merge (the parade start), or the merge itself if the route has no other.
+ */
+export function flowExit(checkpoints: Pick<LayoutCheckpoint, "name" | "sequence" | "is_merge_point" | "is_finish">[]): string {
+  const sorted = [...checkpoints].sort((a, b) => a.sequence - b.sequence);
+  const merge = sorted.find((c) => c.is_merge_point);
+  const after = sorted.find((c) => !c.is_merge_point && !c.is_finish && (!merge || c.sequence > merge.sequence));
+  return (after ?? merge)?.name ?? "Parade route";
+}

@@ -55,7 +55,7 @@ npm run dev
 1. Create a Supabase project.
 2. Apply the migrations in `supabase/migrations/` in order, using `supabase db push` or the SQL editor. Then run `supabase/seed.sql` to load the Southport 2026 event.
 
-   The seed's staging layout, west to east along Bay St: South Caswell Ave and South Lord St (two lanes) face south and turn left onto West Bay St; South Atlantic Ave and South Rhett St face south and turn right onto East Bay St, where the main lineup extends. Both sides of Bay St meet at the merge at South Howe St, and the parade goes north on Howe. Re-running `seed.sql` brings an existing database up to this layout. Streets that already have units placed on them are left as they are.
+   The seed's staging layout, west to east along Bay St: South Caswell Ave and South Lord St (two lanes) face south and turn left onto West Bay St; South Atlantic Ave and South Rhett St face south and turn right onto East Bay St, where the main lineup extends. Everything merges at Bay St and South Howe St into five northbound rows on South Howe St, along with a golf cart group (one unit) from a parking lot just south of the merge. The parade begins at Howe St and Moore St and goes north on Howe. Re-running `seed.sql` brings an existing database up to this layout. Streets that already have units placed on them are left as they are.
 3. In **Auth → URL Configuration**, add `https://<your-domain>/auth/callback` (and `http://localhost:3000/auth/callback`) to the redirect URLs.
 4. In **Auth → Email Templates → Magic Link**, use a template that works on any device and includes a code:
 
