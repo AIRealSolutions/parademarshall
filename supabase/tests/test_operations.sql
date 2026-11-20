@@ -84,7 +84,7 @@ do $$
 declare l jsonb; lane jsonb;
 begin
   l := public.staging_layout(test.id('ev27'));
-  assert jsonb_array_length(l -> 'zones') = 6, l::text;
+  assert jsonb_array_length(l -> 'zones') = 8, l::text;
   assert jsonb_array_length(l -> 'checkpoints') = 5;
   lane := l -> 'zones' -> 0 -> 'lanes' -> 0;
   assert lane -> 'geometry' ->> 'type' = 'LineString', lane::text;
@@ -104,9 +104,19 @@ begin
   select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'SRHETT';
   assert z ->> 'feeds_into' = 'East Bay Street', z::text;
   select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'WBAY';
+  assert z ->> 'feeds_into' = 'South Howe Street', z::text;
+  select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'GOLFLOT';
+  assert z ->> 'feeds_into' = 'South Howe Street', z::text;
+  -- Five northbound rows on South Howe lead straight to the parade start.
+  select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'SHOWE';
   assert z ->> 'feeds_into_zone_id' is null, z::text;
+  assert jsonb_array_length(z -> 'lanes') = 5, z::text;
+  assert (z -> 'lanes' -> 0 ->> 'direction') = 'northbound', z::text;
+  -- The route now begins at Moore St.
+  assert jsonb_array_length(l -> 'route') = 3, l::text;
+  assert l -> 'route' -> 0 ->> 'name' = 'Howe St: Moore St to Nash St', l::text;
   select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'EBAY';
-  assert z ->> 'feeds_into_zone_id' is null, z::text;
+  assert z ->> 'feeds_into' = 'South Howe Street', z::text;
   assert jsonb_array_length(z -> 'lanes') = 2, z::text;
   select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'SLORD';
   assert jsonb_array_length(z -> 'lanes') = 2, z::text;
@@ -245,7 +255,7 @@ begin
   assert (r -> 'dispatch' ->> 'releases')::int = 2, r::text;
   assert (r -> 'dispatch' ->> 'holds')::int = 1, r::text;
   assert jsonb_array_length(r -> 'history') = 2, r::text;
-  assert jsonb_array_length(r -> 'staging') = 6, r::text;
+  assert jsonb_array_length(r -> 'staging') = 8, r::text;
 end $$;
 reset role;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkPlacement, firstFreeOffset, flowPath, flowTree, lineupFeasibility, type LayoutBlock, type LayoutLane, type StagedPosition } from "../staging";
+import { checkPlacement, firstFreeOffset, flowExit, flowPath, flowTree, lineupFeasibility, type LayoutBlock, type LayoutLane, type StagedPosition } from "../staging";
 
 const block = (assignments: [number, number][] = [], extra: Partial<LayoutBlock> = {}): LayoutBlock => ({
   id: "b",
@@ -108,5 +108,17 @@ describe("staging traffic flow", () => {
     expect(tree.map((n) => n.zone.id)).toEqual(["wbay", "ebay"]);
     expect(tree[0].feeders.map((n) => n.zone.id)).toEqual(["caswell", "lord"]);
     expect(tree[1].feeders.map((n) => n.zone.id)).toEqual(["atlantic", "rhett"]);
+  });
+});
+
+describe("flowExit", () => {
+  it("names the parade start after the merge", () => {
+    expect(
+      flowExit([
+        { name: "Fire Department (finish)", sequence: 5, is_merge_point: false, is_finish: true },
+        { name: "Bay St / Howe St (merge)", sequence: 1, is_merge_point: true, is_finish: false },
+        { name: "Moore St / Howe St (parade start)", sequence: 2, is_merge_point: false, is_finish: false },
+      ]),
+    ).toBe("Moore St / Howe St (parade start)");
   });
 });

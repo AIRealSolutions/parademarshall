@@ -355,9 +355,9 @@ declare v public.events;
 begin
   v := public.clone_event('00000000-0000-4000-8000-000000002026', 'southport-christmas-2027',
                           'Southport Christmas Parade', 2027);
-  assert (select count(*) from public.staging_zones where event_id = v.id) = 6;
+  assert (select count(*) from public.staging_zones where event_id = v.id) = 8;
   assert (select count(*) from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 37;
+          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 53;
   -- Side streets still feed the new event's own Bay Street zones.
   assert (select count(*) from public.staging_zones z join public.staging_zones f on f.id = z.feeds_into_zone_id
           where z.event_id = v.id and f.event_id = v.id and f.code = 'EBAY') = 2;

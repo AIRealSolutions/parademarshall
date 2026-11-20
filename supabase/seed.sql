@@ -18,7 +18,7 @@ values (
     'dates_confirmed', false,
     'fees_enabled', false,
     'approval_policy', 'manual',
-    'start', 'Bay Street at South Howe Street',
+    'start', 'Howe Street at Moore Street',
     'direction', 'Northbound on Howe Street',
     'finish', 'Southport Fire Department'
   )
@@ -48,15 +48,14 @@ insert into public.waivers (event_id, title, body, version) values (
   1
 ) on conflict do nothing;
 
--- Route: Bay/Howe northbound on Howe Street to the Fire Department.
+-- Route: starts at Howe St / Moore St and runs north on Howe Street to the
+-- Fire Department. Howe St between Bay St and Moore St is staging (5 rows).
 insert into public.route_segments (event_id, sequence, name, geometry) values
-  ('00000000-0000-4000-8000-000000002026', 1, 'Howe St: Bay St to Moore St',
-   extensions.st_geomfromtext('LINESTRING(-78.01985 33.91620, -78.01995 33.91830)', 4326)),
-  ('00000000-0000-4000-8000-000000002026', 2, 'Howe St: Moore St to Nash St',
+  ('00000000-0000-4000-8000-000000002026', 1, 'Howe St: Moore St to Nash St',
    extensions.st_geomfromtext('LINESTRING(-78.01995 33.91830, -78.02020 33.92010)', 4326)),
-  ('00000000-0000-4000-8000-000000002026', 3, 'Howe St: Nash St to West St',
+  ('00000000-0000-4000-8000-000000002026', 2, 'Howe St: Nash St to West St',
    extensions.st_geomfromtext('LINESTRING(-78.02020 33.92010, -78.02070 33.92210)', 4326)),
-  ('00000000-0000-4000-8000-000000002026', 4, 'Howe St: West St to Fire Department',
+  ('00000000-0000-4000-8000-000000002026', 3, 'Howe St: West St to Fire Department',
    extensions.st_geomfromtext('LINESTRING(-78.02070 33.92210, -78.02250 33.93180)', 4326))
 on conflict do nothing;
 
@@ -64,7 +63,7 @@ on conflict do nothing;
 insert into public.checkpoints (event_id, code, name, sequence, location, is_merge_point, is_finish) values
   ('00000000-0000-4000-8000-000000002026', 'BAY-HOWE', 'Bay St / Howe St (merge)', 1,
    extensions.st_setsrid(extensions.st_makepoint(-78.01985, 33.91620), 4326), true, false),
-  ('00000000-0000-4000-8000-000000002026', 'MOORE-HOWE', 'Moore St / Howe St', 2,
+  ('00000000-0000-4000-8000-000000002026', 'MOORE-HOWE', 'Moore St / Howe St (parade start)', 2,
    extensions.st_setsrid(extensions.st_makepoint(-78.01995, 33.91830), 4326), false, false),
   ('00000000-0000-4000-8000-000000002026', 'NASH-HOWE', 'Nash St / Howe St', 3,
    extensions.st_setsrid(extensions.st_makepoint(-78.02020, 33.92010), 4326), false, false),
@@ -75,24 +74,32 @@ insert into public.checkpoints (event_id, code, name, sequence, location, is_mer
 on conflict do nothing;
 
 -- =============================================================================
--- Staging layout (2026 plan), west to east along Bay Street:
+-- Staging layout (2026 plan):
 --
---   S Caswell Ave   S Lord St                  S Atlantic Ave   S Rhett St
---   (facing south)  (2 lanes, south)           (facing south)   (facing south)
---        │            ││                            │                │
---        └──► West Bay St (eastbound) ──► MERGE ◄── East Bay St (westbound) ◄──┘
---                                         Bay St / S Howe St
---                                         parade turns north on Howe St
+--                       PARADE START: Howe St / Moore St ──► north on Howe
+--                                        ▲
+--                          S Howe St: 5 rows facing north
+--   S Caswell Ave   S Lord St            ▲            S Atlantic Ave   S Rhett St
+--   (facing south)  (2 lanes, south)     │            (facing south)   (facing south)
+--        │            ││                 │                 │                │
+--        └──► West Bay St (eastbound) ─► MERGE ◄─ East Bay St (westbound) ◄─┘
+--                                 Bay St / S Howe St
+--                                        ▲
+--                          Golf cart lot (south of the merge)
 --
 -- West of Howe, Caswell and Lord turn left (east) onto West Bay Street.
 -- East of Howe, Atlantic and Rhett turn right (west) onto East Bay Street,
--- where the main lineup extends. Both streams meet at the single merge.
+-- where the main lineup extends. Both streams, and the golf cart group from
+-- the lot, merge at Bay St / S Howe St into five northbound rows on South
+-- Howe Street. The parade begins at Howe St / Moore St.
 --
 -- Geometry follows the approved staging diagram, anchored at the Bay St /
 -- S Howe St merge (-78.01985, 33.91620): Bay Street is drawn straight
 -- east-west and each side street straight north from its Bay St corner, at
 -- the diagram's spacing (about 1 m per diagram unit). Each zone starts at the
--- end nearest the merge. The diagram is schematic, so these lines may not sit
+-- end its units leave from (block 1 leaves first): the Bay St corner for side
+-- streets, Howe St for Bay Street, Moore St for the South Howe rows, and the
+-- north (Bay St) edge for the golf cart lot. The diagram is schematic, so these lines may not sit
 -- exactly on the real curbs: adjust them on the Staging Map and mark them
 -- field-validated before approving the plan. Block lengths are sized to fill
 -- each line.
@@ -109,7 +116,7 @@ declare
   v_lane uuid;
   n integer;
   b integer;
-  v_keep text[] := array['SCASWELL', 'SLORD', 'WBAY', 'EBAY', 'SATLANTIC', 'SRHETT'];
+  v_keep text[] := array['SCASWELL', 'SLORD', 'WBAY', 'EBAY', 'SATLANTIC', 'SRHETT', 'SHOWE', 'GOLFLOT'];
 begin
   if not exists (select 1 from public.events where id = v_event) then
     return;
@@ -145,13 +152,13 @@ begin
      'general'::public.zone_use,
      'LINESTRING(-78.01985 33.91620, -78.02534 33.91620)',
      'eastbound'::public.compass_direction, 2, 5, 330::numeric, 11::numeric, 3, null::text,
-     'East on Bay St to the Bay St / S Howe St merge.'),
+     'East on Bay St to the Bay St / S Howe St merge, then north into the South Howe rows.'),
     ('EBAY', 'East Bay Street',
      'Main lineup. Units face west toward South Howe Street; the front is nearest the merge. Atlantic and Rhett empty onto it.',
      'general'::public.zone_use,
      'LINESTRING(-78.01985 33.91620, -78.01436 33.91620)',
      'westbound'::public.compass_direction, 2, 6, 275::numeric, 11::numeric, 4, null::text,
-     'West on Bay St to the Bay St / S Howe St merge.'),
+     'West on Bay St to the Bay St / S Howe St merge, then north into the South Howe rows.'),
     ('SATLANTIC', 'South Atlantic Avenue',
      'East of Howe. Vehicles staged facing south; turn right (west) onto East Bay Street.',
      'general'::public.zone_use,
@@ -163,7 +170,19 @@ begin
      'general'::public.zone_use,
      'LINESTRING(-78.01573 33.91620, -78.01573 33.91838)',
      'southbound'::public.compass_direction, 1, 3, 265::numeric, 10::numeric, 6, 'EBAY',
-     'South to Bay St, right onto East Bay, west to Howe St.')
+     'South to Bay St, right onto East Bay, west to Howe St.'),
+    ('SHOWE', 'South Howe Street',
+     'Five rows facing north between Bay St and Moore St. Units enter from the Bay St / S Howe St merge; the front row leaves at Moore St, where the parade begins.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01995 33.91830, -78.01986 33.91634)',
+     'northbound'::public.compass_direction, 5, 3, 250::numeric, 10::numeric, 7, null::text,
+     'North on Howe St to the parade start at Moore St.'),
+    ('GOLFLOT', 'Golf Cart Lot',
+     'Large parking lot south of the Bay St / S Howe St merge for the golf cart group, which parades as one unit. Carts park in rows; capacity is shown as equivalent single-file length.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01985 33.91600, -78.01985 33.91545)',
+     'northbound'::public.compass_direction, 1, 1, 600::numeric, 60::numeric, 8, null::text,
+     'North across Bay St at the merge into the South Howe St rows when released.')
   ) as t(code, street, descr, use, wkt, dir, lanes, blocks, block_len, width, sort, feeds, flow)
   loop
     select id into v_zone from public.staging_zones where event_id = v_event and code = z.code;
@@ -205,9 +224,34 @@ begin
   -- Link each street to the street it empties onto (null = straight to the merge).
   update public.staging_zones sz
      set feeds_into_zone_id = (select t.id from public.staging_zones t where t.event_id = v_event and t.code = f.feeds)
-    from (values ('SCASWELL', 'WBAY'), ('SLORD', 'WBAY'), ('WBAY', null),
-                 ('EBAY', null), ('SATLANTIC', 'EBAY'), ('SRHETT', 'EBAY')) as f(code, feeds)
+    from (values ('SCASWELL', 'WBAY'), ('SLORD', 'WBAY'), ('WBAY', 'SHOWE'),
+                 ('EBAY', 'SHOWE'), ('SATLANTIC', 'EBAY'), ('SRHETT', 'EBAY'),
+                 ('GOLFLOT', 'SHOWE'), ('SHOWE', null)) as f(code, feeds)
    where sz.event_id = v_event and sz.code = f.code;
+
+  -- The golf cart lot is a parking lot, not a curb lane.
+  update public.staging_blocks bl
+     set accessibility_notes = 'Parking lot: golf carts park in rows. The whole group is one parade unit.',
+         turning_notes = 'Exit north across Bay St at the merge into the South Howe St rows.'
+    from public.staging_lanes l join public.staging_zones sz on sz.id = l.zone_id
+   where bl.lane_id = l.id and sz.event_id = v_event and sz.code = 'GOLFLOT'
+     and bl.accessibility_notes is null;
+
+  -- Howe St between Bay St and Moore St is now staging; the parade starts at Moore St.
+  if exists (select 1 from public.route_segments
+             where event_id = v_event and name = 'Howe St: Bay St to Moore St') then
+    delete from public.route_segments where event_id = v_event and name = 'Howe St: Bay St to Moore St';
+    update public.route_segments set sequence = sequence + 100 where event_id = v_event;
+    update public.route_segments rs set sequence = o.n
+      from (select id, row_number() over (order by sequence) as n
+            from public.route_segments where event_id = v_event) o
+     where rs.id = o.id;
+  end if;
+  update public.checkpoints set name = 'Moore St / Howe St (parade start)'
+   where event_id = v_event and code = 'MOORE-HOWE' and name = 'Moore St / Howe St';
+  update public.events
+     set settings = settings || jsonb_build_object('start', 'Howe Street at Moore Street')
+   where id = v_event and settings ->> 'start' = 'Bay Street at South Howe Street';
 
   -- Shoreline construction on West Bay: usable boundary pending confirmation (SDS §10).
   insert into public.restrictions (event_id, block_id, status, reason, responsible_authority, is_safety)
