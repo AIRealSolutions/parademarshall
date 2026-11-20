@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkPlacement, firstFreeOffset, lineupFeasibility, type LayoutBlock, type StagedPosition } from "../staging";
+import { checkPlacement, firstFreeOffset, flowPath, flowTree, lineupFeasibility, type LayoutBlock, type LayoutLane, type StagedPosition } from "../staging";
 
 const block = (assignments: [number, number][] = [], extra: Partial<LayoutBlock> = {}): LayoutBlock => ({
   id: "b",
@@ -72,5 +72,37 @@ describe("lineupFeasibility", () => {
     const w = lineupFeasibility(["b", "a", "c"], positions);
     expect(w).toHaveLength(1);
     expect(w[0].unit_ids).toEqual(["a", "b"]);
+  });
+});
+
+describe("staging traffic flow", () => {
+  const zone = (id: string, street_name: string, feeds_into_zone_id: string | null, laneCount = 1) => ({
+    id,
+    street_name,
+    feeds_into_zone_id,
+    lanes: Array.from({ length: laneCount }, (_, i) => ({ id: `${id}-${i}` })) as unknown as LayoutLane[],
+  });
+  const zones = [
+    zone("ebay", "East Bay Street", null, 2),
+    zone("lord", "South Lord Street", "ebay", 2),
+    zone("caswell", "South Caswell Avenue", "ebay"),
+    zone("atlantic", "South Atlantic Avenue", "ebay"),
+    zone("rhett", "South Rhett Street", "ebay"),
+  ];
+
+  it("follows a side street onto East Bay toward the merge", () => {
+    expect(flowPath(zones, "caswell")).toEqual(["South Caswell Avenue", "East Bay Street"]);
+    expect(flowPath(zones, "ebay")).toEqual(["East Bay Street"]);
+  });
+
+  it("stops instead of looping forever on a bad chain", () => {
+    const looped = [zone("a", "A", "b"), zone("b", "B", "a")];
+    expect(flowPath(looped, "a")).toEqual(["A", "B"]);
+  });
+
+  it("roots the tree at the street that leads to the merge", () => {
+    const tree = flowTree(zones);
+    expect(tree.map((n) => n.zone.id)).toEqual(["ebay"]);
+    expect(tree[0].feeders.map((n) => n.zone.id)).toEqual(["lord", "caswell", "atlantic", "rhett"]);
   });
 });

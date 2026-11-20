@@ -164,37 +164,43 @@ update public.parade_units set sequence_number = 2 where id = test.id('unit2');
 
 -- Staging rules ---------------------------------------------------------------
 insert into test.ids
-select 'wbay_l1_b1', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-  join public.staging_zones z on z.id = l.zone_id where z.code = 'WBAY' and l.lane_number = 1 and b.block_number = 1;
+select 'ebay_l1_b1', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
+  join public.staging_zones z on z.id = l.zone_id where z.code = 'EBAY' and l.lane_number = 1 and b.block_number = 1;
 insert into test.ids
-select 'wbay_l1_b2', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-  join public.staging_zones z on z.id = l.zone_id where z.code = 'WBAY' and l.lane_number = 1 and b.block_number = 2;
+select 'ebay_l1_b2', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
+  join public.staging_zones z on z.id = l.zone_id where z.code = 'EBAY' and l.lane_number = 1 and b.block_number = 2;
 insert into test.ids
-select 'wbay_l1_b3', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-  join public.staging_zones z on z.id = l.zone_id where z.code = 'WBAY' and l.lane_number = 1 and b.block_number = 3;
+select 'ebay_l1_b3', b.id from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
+  join public.staging_zones z on z.id = l.zone_id where z.code = 'EBAY' and l.lane_number = 1 and b.block_number = 3;
 
--- Seeded shoreline safety restriction cannot be overridden.
+-- A safety restriction cannot be overridden.
+reset role;
+insert into public.restrictions (event_id, block_id, status, reason, responsible_authority, is_safety)
+values ('00000000-0000-4000-8000-000000002026', test.id('ebay_l1_b3'), 'restricted',
+        'Hydrant access must stay clear', 'Southport Fire Department', true);
+select set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000002', false);
+set role authenticated;
 select test.expect_error($$insert into public.staging_assignments (event_id, unit_id, block_id, occupied_length_ft, override_reason)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('wbay_l1_b3'), 69, 'director ok')$$,
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('ebay_l1_b3'), 69, 'director ok')$$,
   'safety restriction');
 -- Complete footprint (44 + 25 separation) is required.
 select test.expect_error($$insert into public.staging_assignments (event_id, unit_id, block_id, occupied_length_ft)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('wbay_l1_b1'), 44)$$, 'separation');
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('ebay_l1_b1'), 44)$$, 'separation');
 -- Must fit within the block's usable length.
 select test.expect_error($$insert into public.staging_assignments (event_id, unit_id, block_id, start_offset_ft, occupied_length_ft)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('wbay_l1_b1'), 250, 69)$$, 'usable');
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('ebay_l1_b1'), 250, 69)$$, 'usable');
 
 with s as (
   insert into public.staging_assignments (event_id, unit_id, block_id, start_offset_ft, occupied_length_ft)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('wbay_l1_b1'), 0, 69) returning id
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit1'), test.id('ebay_l1_b1'), 0, 69) returning id
 ) insert into test.ids select 'assign1', id from s;
 -- No overlap with reserved space.
 select test.expect_error($$insert into public.staging_assignments (event_id, unit_id, block_id, start_offset_ft, occupied_length_ft)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit2'), test.id('wbay_l1_b1'), 50, 65)$$,
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit2'), test.id('ebay_l1_b1'), 50, 65)$$,
   'staging_assignments_no_overlap');
 with s as (
   insert into public.staging_assignments (event_id, unit_id, block_id, start_offset_ft, occupied_length_ft)
-  values ('00000000-0000-4000-8000-000000002026', test.id('unit2'), test.id('wbay_l1_b1'), 69, 65) returning id
+  values ('00000000-0000-4000-8000-000000002026', test.id('unit2'), test.id('ebay_l1_b1'), 69, 65) returning id
 ) insert into test.ids select 'assign2', id from s;
 
 select public.approve_staging_assignment(test.id('assign1'));
@@ -207,21 +213,21 @@ end $$;
 
 -- A new closure flags affected units and notifies — it never relocates them.
 insert into public.restrictions (event_id, block_id, status, reason, responsible_authority)
-values ('00000000-0000-4000-8000-000000002026', test.id('wbay_l1_b1'), 'temporarily_closed',
+values ('00000000-0000-4000-8000-000000002026', test.id('ebay_l1_b1'), 'temporarily_closed',
         'Utility work', 'Public Works');
 do $$ begin
   assert (select count(*) from public.staging_assignments
-          where block_id = test.id('wbay_l1_b1') and status = 'flagged') = 2;
-  assert (select block_id from public.staging_assignments where id = test.id('assign1')) = test.id('wbay_l1_b1');
+          where block_id = test.id('ebay_l1_b1') and status = 'flagged') = 2;
+  assert (select block_id from public.staging_assignments where id = test.id('assign1')) = test.id('ebay_l1_b1');
   assert exists (select 1 from public.notifications where related_table = 'restrictions'
                    and recipient_id = '10000000-0000-4000-8000-000000000002');
 end $$;
 -- Re-approving onto the closed block is refused.
 select test.expect_error($$select public.approve_staging_assignment(test.id('assign1'), 'please')$$, 'temporarily_closed');
 -- Director reassigns to an open block.
-update public.staging_assignments set block_id = test.id('wbay_l1_b2'), start_offset_ft = 0, status = 'approved'
+update public.staging_assignments set block_id = test.id('ebay_l1_b2'), start_offset_ft = 0, status = 'approved'
  where id = test.id('assign1');
-update public.staging_assignments set block_id = test.id('wbay_l1_b2'), start_offset_ft = 69, status = 'approved'
+update public.staging_assignments set block_id = test.id('ebay_l1_b2'), start_offset_ft = 69, status = 'approved'
  where id = test.id('assign2');
 reset role;
 
@@ -240,7 +246,7 @@ begin
   r := public.check_in_unit((select pass_token from test.tokens where id = test.id('unit1')),
                             '20000000-0000-4000-8000-000000000001', now());
   assert (r ->> 'ok')::boolean, r::text;
-  assert r -> 'assignment' ->> 'zone' = 'West Bay Street', r::text;
+  assert r -> 'assignment' ->> 'zone' = 'East Bay Street', r::text;
   -- Replaying the same offline action returns the synchronized result.
   r := public.check_in_unit((select pass_token from test.tokens where id = test.id('unit1')),
                             '20000000-0000-4000-8000-000000000001', now());
@@ -328,7 +334,7 @@ begin
   assert jsonb_array_length(p -> 'checkpoints') = 5;
   assert p::text not like '%pat@example.test%', 'private contact leaked to publication';
   assert p::text not like '%910-555%', 'private phone leaked to publication';
-  assert p::text not like '%WBAY%', 'staging location leaked to publication';
+  assert p::text not like '%EBAY%', 'staging location leaked to publication';
   assert (select phase from public.public_progress('southport-christmas-2026') where sequence_number = 1) = 'finished';
   assert (select phase from public.public_progress('southport-christmas-2026') where sequence_number = 2) = 'on_route';
 end $$;
@@ -351,7 +357,10 @@ begin
                           'Southport Christmas Parade', 2027);
   assert (select count(*) from public.staging_zones where event_id = v.id) = 5;
   assert (select count(*) from public.staging_blocks b join public.staging_lanes l on l.id = b.lane_id
-          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 24;
+          join public.staging_zones z on z.id = l.zone_id where z.event_id = v.id) = 27;
+  -- Side streets still feed the new event's own East Bay Street.
+  assert (select count(*) from public.staging_zones z join public.staging_zones f on f.id = z.feeds_into_zone_id
+          where z.event_id = v.id and f.event_id = v.id and f.code = 'EBAY') = 4;
   assert (select count(*) from public.parade_units where event_id = v.id) = 0;
   assert (select count(*) from public.applications where event_id = v.id) = 0;
   assert (select count(*) from public.restrictions where event_id = v.id) = 0;

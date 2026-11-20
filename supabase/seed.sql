@@ -74,7 +74,25 @@ insert into public.checkpoints (event_id, code, name, sequence, location, is_mer
    extensions.st_setsrid(extensions.st_makepoint(-78.02250, 33.93180), 4326), false, true)
 on conflict do nothing;
 
--- Staging zones, two configurable lanes each, numbered blocks per lane.
+-- =============================================================================
+-- Staging layout (2026 plan)
+--
+--   S Caswell Ave (facing south) ─┐
+--   S Lord St (2 lanes, south)  ──┤
+--   S Atlantic Ave (facing south)─┼─► East Bay St (westbound) ─► MERGE at Bay St / S Howe St
+--   S Rhett St (facing south)   ──┘                                 └─► parade north on Howe St
+--
+-- Every side street drains south onto East Bay Street, and East Bay Street
+-- carries the lineup west to the single merge at South Howe Street.
+--
+-- Zone geometry is drawn starting at the end nearest the merge: East Bay from
+-- Howe St eastward, each side street from its Bay St corner northward.
+-- Coordinates and the east-west order of the side streets are PLACEHOLDERS;
+-- redraw them on the Staging Map before approving the plan.
+--
+-- Re-running this file reconciles the layout. A street that already has units
+-- placed on it (or ever had) is left untouched and reported with a NOTICE.
+-- =============================================================================
 do $$
 declare
   v_event uuid := '00000000-0000-4000-8000-000000002026';
@@ -83,32 +101,89 @@ declare
   v_lane uuid;
   n integer;
   b integer;
+  v_keep text[] := array['EBAY', 'SLORD', 'SCASWELL', 'SATLANTIC', 'SRHETT'];
 begin
-  for z in select * from (values
-    ('EBAY', 'East Bay Street', 'Primarily fire apparatus. Feeds Howe St at the Bay/Howe merge.',
-     'fire_apparatus'::public.zone_use, 'LINESTRING(-78.01985 33.91620, -78.01560 33.91600)',
-     'westbound'::public.compass_direction, 3, 300::numeric, 12::numeric, 1),
-    ('WBAY', 'West Bay Street', 'General parade units. Shoreline construction may restrict segments.',
-     'general'::public.zone_use, 'LINESTRING(-78.01985 33.91620, -78.02420 33.91610)',
-     'eastbound'::public.compass_direction, 3, 300::numeric, 11::numeric, 2),
-    ('SLORD', 'South Lord Street', 'Overflow staging.',
-     'overflow'::public.zone_use, 'LINESTRING(-78.01560 33.91600, -78.01540 33.91820)',
-     'southbound'::public.compass_direction, 2, 280::numeric, 10::numeric, 3),
-    ('SCASWELL', 'South Caswell Avenue', 'Overflow staging.',
-     'overflow'::public.zone_use, 'LINESTRING(-78.02420 33.91610, -78.02430 33.91830)',
-     'southbound'::public.compass_direction, 2, 280::numeric, 10::numeric, 4),
-    ('SATLANTIC', 'South Atlantic Avenue', 'Overflow staging.',
-     'overflow'::public.zone_use, 'LINESTRING(-78.02200 33.91615, -78.02210 33.91830)',
-     'southbound'::public.compass_direction, 2, 280::numeric, 10::numeric, 5)
-  ) as t(code, street, descr, use, wkt, dir, blocks, block_len, width, sort)
-  loop
-    insert into public.staging_zones (event_id, code, street_name, description, primary_use, geometry, sort_order)
-    values (v_event, z.code, z.street, z.descr, z.use, extensions.st_geomfromtext(z.wkt, 4326), z.sort)
-    on conflict (event_id, code) do nothing
-    returning id into v_zone;
-    continue when v_zone is null;
+  if not exists (select 1 from public.events where id = v_event) then
+    return;
+  end if;
 
-    for n in 1..2 loop
+  -- Streets no longer in the plan (e.g. West Bay Street) are removed if unused.
+  for z in select sz.id, sz.street_name from public.staging_zones sz
+           where sz.event_id = v_event and sz.code <> all (v_keep) loop
+    if exists (select 1 from public.staging_assignments a
+               join public.staging_blocks bl on bl.id = a.block_id
+               join public.staging_lanes l on l.id = bl.lane_id where l.zone_id = z.id) then
+      raise notice 'Kept % in the staging plan: units have been placed there.', z.street_name;
+    else
+      delete from public.staging_zones where id = z.id;
+    end if;
+  end loop;
+
+  for z in select * from (values
+    ('EBAY', 'East Bay Street',
+     'Main lineup. Units face west toward South Howe Street; the front of the parade is nearest the merge. Every side street empties onto East Bay.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01985 33.91620, -78.01250 33.91590)',
+     'westbound'::public.compass_direction, 2, 6, 300::numeric, 11::numeric, 1, null::text,
+     'Leads directly to the Bay St / S Howe St merge.'),
+    ('SLORD', 'South Lord Street',
+     'Two lanes of southbound traffic. Both lanes turn right (west) onto East Bay Street.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01700 33.91610, -78.01690 33.91830)',
+     'southbound'::public.compass_direction, 2, 3, 260::numeric, 10::numeric, 2, 'EBAY',
+     'Two lanes south to Bay St, then right onto East Bay toward Howe St.'),
+    ('SCASWELL', 'South Caswell Avenue',
+     'Vehicles staged facing south. Drains onto East Bay Street.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01280 33.91592, -78.01270 33.91830)',
+     'southbound'::public.compass_direction, 1, 3, 280::numeric, 10::numeric, 3, 'EBAY',
+     'South to Bay St, then right onto East Bay toward Howe St.'),
+    ('SATLANTIC', 'South Atlantic Avenue',
+     'Vehicles staged facing south. Drains onto East Bay Street.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01550 33.91605, -78.01540 33.91830)',
+     'southbound'::public.compass_direction, 1, 3, 260::numeric, 10::numeric, 4, 'EBAY',
+     'South to Bay St, then right onto East Bay toward Howe St.'),
+    ('SRHETT', 'South Rhett Street',
+     'Vehicles staged facing south. Drains onto East Bay Street.',
+     'general'::public.zone_use,
+     'LINESTRING(-78.01410 33.91600, -78.01400 33.91830)',
+     'southbound'::public.compass_direction, 1, 3, 260::numeric, 10::numeric, 5, 'EBAY',
+     'South to Bay St, then right onto East Bay toward Howe St.')
+  ) as t(code, street, descr, use, wkt, dir, lanes, blocks, block_len, width, sort, feeds, flow)
+  loop
+    select id into v_zone from public.staging_zones where event_id = v_event and code = z.code;
+
+    if v_zone is not null and exists (
+         select 1 from public.staging_assignments a
+         join public.staging_blocks bl on bl.id = a.block_id
+         join public.staging_lanes l on l.id = bl.lane_id where l.zone_id = v_zone) then
+      -- Units are placed here: record the flow, but don't rebuild lanes or blocks.
+      update public.staging_zones
+         set feeds_into_zone_id = (select id from public.staging_zones where event_id = v_event and code = z.feeds),
+             flow_notes = z.flow, sort_order = z.sort
+       where id = v_zone;
+      raise notice 'Kept the lanes and blocks on % unchanged: units have been placed there.', z.street;
+      continue;
+    end if;
+
+    if v_zone is null then
+      insert into public.staging_zones (event_id, code, street_name, description, primary_use, geometry, sort_order,
+                                        feeds_into_zone_id, flow_notes)
+      values (v_event, z.code, z.street, z.descr, z.use, extensions.st_geomfromtext(z.wkt, 4326), z.sort,
+              (select id from public.staging_zones where event_id = v_event and code = z.feeds), z.flow)
+      returning id into v_zone;
+    else
+      update public.staging_zones
+         set street_name = z.street, description = z.descr, primary_use = z.use,
+             geometry = extensions.st_geomfromtext(z.wkt, 4326), sort_order = z.sort,
+             feeds_into_zone_id = (select id from public.staging_zones where event_id = v_event and code = z.feeds),
+             flow_notes = z.flow, field_validated = false
+       where id = v_zone;
+      delete from public.staging_lanes where zone_id = v_zone;
+    end if;
+
+    for n in 1..z.lanes loop
       insert into public.staging_lanes (zone_id, lane_number, width_ft, direction)
       values (v_zone, n, z.width, z.dir) returning id into v_lane;
       for b in 1..z.blocks loop
@@ -117,15 +192,5 @@ begin
       end loop;
     end loop;
   end loop;
-end $$;
 
--- Shoreline construction: pending confirmation of usable boundaries (SDS §10).
-insert into public.restrictions (event_id, block_id, status, reason, responsible_authority, is_safety)
-select '00000000-0000-4000-8000-000000002026', b.id, 'restricted',
-       'Shoreline construction area — usable staging boundary not yet confirmed',
-       'City of Southport (to be confirmed)', true
-from public.staging_blocks b
-join public.staging_lanes l on l.id = b.lane_id
-join public.staging_zones z on z.id = l.zone_id
-where z.event_id = '00000000-0000-4000-8000-000000002026' and z.code = 'WBAY' and b.block_number = 3
-  and not exists (select 1 from public.restrictions r where r.block_id = b.id);
+end $$;

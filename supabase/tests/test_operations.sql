@@ -93,6 +93,26 @@ begin
 end $$;
 
 insert into test.ids select 'z27', id from public.staging_zones where event_id = test.id('ev27') and code = 'SLORD';
+
+-- Staging flow: cloned with the event, reported by the layout, and never loops.
+do $$
+declare l jsonb; z jsonb;
+begin
+  l := public.staging_layout(test.id('ev27'));
+  select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'SCASWELL';
+  assert z ->> 'feeds_into' = 'East Bay Street', z::text;
+  select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'EBAY';
+  assert z ->> 'feeds_into_zone_id' is null, z::text;
+  assert jsonb_array_length(z -> 'lanes') = 2, z::text;
+  select e into z from jsonb_array_elements(l -> 'zones') e where e ->> 'code' = 'SLORD';
+  assert jsonb_array_length(z -> 'lanes') = 2, z::text;
+  assert (z -> 'lanes' -> 0 ->> 'direction') = 'southbound', z::text;
+end $$;
+select test.expect_error(format($$update public.staging_zones set feeds_into_zone_id = %L
+  where event_id = %L and code = 'EBAY'$$, test.id('z27'), test.id('ev27')), 'loop');
+select test.expect_error(format($$update public.staging_zones set feeds_into_zone_id =
+  (select id from public.staging_zones where event_id = '00000000-0000-4000-8000-000000002026' and code = 'EBAY')
+  where id = %L$$, test.id('z27')), 'same event');
 select public.update_geometry('zone', test.id('z27'),
   '{"type":"LineString","coordinates":[[-78.0156,33.9160],[-78.0154,33.9183]]}');
 select test.expect_error(format($$select public.update_geometry('checkpoint',

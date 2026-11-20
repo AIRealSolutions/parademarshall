@@ -10,7 +10,9 @@ import {
   STATUS_LABELS,
   checkPlacement,
   firstFreeOffset,
+  flowTree,
   reservedLength,
+  type FlowNode,
   type LayoutAssignment,
   type LayoutBlock,
   type LayoutLane,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/domain/staging";
 import {
   addBlock,
+  addLane,
   approveAssignment,
   approvePlan,
   assignUnit,
@@ -27,6 +30,7 @@ import {
   markFieldValidated,
   releaseAssignment,
   sendArrivalInstructions,
+  setZoneFlow,
   updateBlock,
   updateGeometry,
   updateLane,
@@ -697,6 +701,30 @@ export function RestrictionForm({
   );
 }
 
+function TrafficFlow({ layout }: { layout: StagingLayout }) {
+  const merge = layout.checkpoints.find((c) => c.is_merge_point);
+  const roots = flowTree(layout.zones);
+  if (layout.zones.length === 0) return null;
+  const lanes = (n: FlowNode) => (n.zone.lanes.length > 1 ? ` (${n.zone.lanes.length} lanes)` : "");
+  const render = (nodes: FlowNode[]) => (
+    <ul className="ml-3 space-y-0.5 border-l border-border pl-2">
+      {nodes.map((n) => (
+        <li key={n.zone.id}>
+          <span>↑ {n.zone.street_name}{lanes(n)}</span>
+          {n.feeders.length > 0 && render(n.feeders)}
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <section className="rounded-md border border-border bg-surface p-2 text-xs">
+      <h3 className="mb-1 font-semibold">Traffic flow to the merge</h3>
+      <p className="font-medium">{merge?.name ?? "Merge"}</p>
+      {render(roots)}
+    </section>
+  );
+}
+
 function LayoutTab({
   layout,
   canEdit,
@@ -712,8 +740,10 @@ function LayoutTab({
   onDraw: (t: DrawTarget) => void;
   action: Action;
 }) {
+  const merge = layout.checkpoints.find((c) => c.is_merge_point);
   return (
     <div className="space-y-5 text-sm">
+      <TrafficFlow layout={layout} />
       {layout.zones.map((z) => (
         <section key={z.id} className="space-y-2">
           <div className="flex items-baseline justify-between gap-2">
@@ -724,8 +754,35 @@ function LayoutTab({
             </span>
           </div>
           {!z.field_validated && <p className="text-xs text-amber-800">Not field-validated</p>}
+          <label className="flex items-center justify-between gap-2 text-xs">
+            <span className="text-muted">Feeds into</span>
+            {canEdit ? (
+              <select
+                className="min-w-0 rounded border border-border bg-surface px-1 py-0.5"
+                value={z.feeds_into_zone_id ?? ""}
+                onChange={(e) =>
+                  action.run(() => setZoneFlow(z.id, e.target.value || null), `${z.street_name} flow updated.`)
+                }
+              >
+                <option value="">{merge ? `${merge.name}` : "The merge"}</option>
+                {layout.zones
+                  .filter((o) => o.id !== z.id)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.street_name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <span>{z.feeds_into ?? merge?.name ?? "The merge"}</span>
+            )}
+          </label>
+          {z.flow_notes && <p className="text-xs text-muted">{z.flow_notes}</p>}
           {canEdit && (
-            <div className="flex gap-3 text-xs">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              <button className="text-brand hover:underline" onClick={() => action.run(() => addLane(z.id), `Lane added to ${z.street_name}.`)}>
+                + lane
+              </button>
               <button className="text-brand hover:underline" onClick={() => onDraw({ kind: "zone", id: z.id, label: `${z.street_name} line`, mode: "line" })}>
                 Redraw street line
               </button>
