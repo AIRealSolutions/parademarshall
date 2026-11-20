@@ -1,9 +1,9 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo } from "react";
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
-import type { LatLngBoundsExpression, LatLngExpression, LatLngTuple } from "leaflet";
+import { useEffect, useMemo, useRef } from "react";
+import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import L, { type LatLngBoundsExpression, type LatLngExpression, type LatLngTuple } from "leaflet";
 import { STATUS_COLORS, STATUS_LABELS, reservedLength, type GeoLine, type GeoPoint, type StagingLayout } from "@/lib/domain/staging";
 
 export interface MapRoute {
@@ -55,20 +55,85 @@ function FitBounds({ bounds }: { bounds: LatLngTuple[] }) {
   return null;
 }
 
+// Draggable handles. Leaflet's default marker images don't bundle with Next,
+// so handles are plain styled divs.
+const vertexIcon = L.divIcon({
+  className: "",
+  html: '<div style="width:18px;height:18px;border-radius:9999px;background:#7c3aed;border:3px solid #fff;box-shadow:0 0 0 1px #7c3aed"></div>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+const midpointIcon = L.divIcon({
+  className: "",
+  html: '<div style="width:12px;height:12px;border-radius:9999px;background:#fff;border:2px solid #7c3aed;opacity:.85"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const round = (ll: L.LatLng): LatLngTuple => [Number(ll.lat.toFixed(6)), Number(ll.lng.toFixed(6))];
+
+/**
+ * Editing layer: drag a purple point to move it, drag a white midpoint to add a
+ * point between two others, tap a point to remove it, tap the map to extend the
+ * line from its far end (or to place a checkpoint).
+ */
 function DrawLayer({ draw }: { draw: DrawState }) {
+  const { points, onChange, mode } = draw;
+  // Tapping "Remove point" also reaches the map as a click once the popup is
+  // gone; ignore map taps briefly so it doesn't add a point where it was.
+  const ignoreClicksUntil = useRef(0);
   useMapEvents({
     click(e) {
-      const p: LatLngTuple = [Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6))];
-      draw.onChange(draw.mode === "point" ? [p] : [...draw.points, p]);
+      if (Date.now() < ignoreClicksUntil.current) return;
+      if ((e.originalEvent.target as Element | null)?.closest?.(".leaflet-popup")) return;
+      onChange(mode === "point" ? [round(e.latlng)] : [...points, round(e.latlng)]);
     },
   });
+  const move = (i: number, ll: L.LatLng) => onChange(points.map((p, j) => (j === i ? round(ll) : p)));
+  const insert = (i: number, ll: L.LatLng) => onChange([...points.slice(0, i + 1), round(ll), ...points.slice(i + 1)]);
+  const remove = (i: number) => {
+    ignoreClicksUntil.current = Date.now() + 400;
+    onChange(points.filter((_, j) => j !== i));
+  };
+  const midpoints =
+    mode === "line"
+      ? points.slice(1).map((p, i) => [(points[i][0] + p[0]) / 2, (points[i][1] + p[1]) / 2] as LatLngTuple)
+      : [];
   return (
     <>
-      {draw.mode === "line" && draw.points.length > 1 && (
-        <Polyline positions={draw.points} pathOptions={{ color: "#7c3aed", weight: 5, dashArray: "6 6" }} />
+      {mode === "line" && points.length > 1 && (
+        <Polyline positions={points} pathOptions={{ color: "#7c3aed", weight: 5, dashArray: "6 6" }} interactive={false} />
       )}
-      {draw.points.map((p, i) => (
-        <CircleMarker key={i} center={p} radius={5} pathOptions={{ color: "#7c3aed", fillOpacity: 1 }} />
+      {midpoints.map((m, i) => (
+        <Marker
+          key={`m${i}-${m[0]}-${m[1]}`}
+          position={m}
+          icon={midpointIcon}
+          draggable
+          title="Drag to add a point here"
+          eventHandlers={{ dragend: (e) => insert(i, (e.target as L.Marker).getLatLng()) }}
+        />
+      ))}
+      {points.map((p, i) => (
+        <Marker
+          key={`v${i}`}
+          position={p}
+          icon={vertexIcon}
+          draggable
+          title={`Point ${i + 1}: drag to move`}
+          eventHandlers={{
+            drag: (e) => move(i, (e.target as L.Marker).getLatLng()),
+            dragend: (e) => move(i, (e.target as L.Marker).getLatLng()),
+          }}
+        >
+          {mode === "line" && points.length > 2 && (
+            <Popup>
+              <button type="button" className="text-sm font-medium text-rose-700" onClick={() => remove(i)}>
+                Remove point {i + 1}
+              </button>
+            </Popup>
+          )}
+        </Marker>
       ))}
     </>
   );
