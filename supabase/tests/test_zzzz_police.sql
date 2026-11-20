@@ -33,7 +33,7 @@ begin
   assert (select count(*) from public.restrictions where event_id = '00000000-0000-4000-8000-000000002026') > 0;
   assert (select count(*) from public.dispatch_events where event_id = '00000000-0000-4000-8000-000000002026') > 0;
   assert (select count(*) from public.movement_events where event_id = '00000000-0000-4000-8000-000000002026') > 0;
-  assert jsonb_array_length(public.staging_layout('00000000-0000-4000-8000-000000002026') -> 'zones') = 5;
+  assert jsonb_array_length(public.staging_layout('00000000-0000-4000-8000-000000002026') -> 'zones') = 6;
   assert (select count(*) from public.applications) = 0, 'officer sees applications';
   assert (select count(*) from public.organizations) = 0, 'officer sees organizations';
   assert (select count(*) from public.vehicles) = 0, 'officer sees vehicles';

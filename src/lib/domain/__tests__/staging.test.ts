@@ -82,16 +82,19 @@ describe("staging traffic flow", () => {
     feeds_into_zone_id,
     lanes: Array.from({ length: laneCount }, (_, i) => ({ id: `${id}-${i}` })) as unknown as LayoutLane[],
   });
+  // West to east along Bay Street; the merge is at Howe, between Lord and Atlantic.
   const zones = [
+    zone("caswell", "South Caswell Avenue", "wbay"),
+    zone("lord", "South Lord Street", "wbay", 2),
+    zone("wbay", "West Bay Street", null, 2),
     zone("ebay", "East Bay Street", null, 2),
-    zone("lord", "South Lord Street", "ebay", 2),
-    zone("caswell", "South Caswell Avenue", "ebay"),
     zone("atlantic", "South Atlantic Avenue", "ebay"),
     zone("rhett", "South Rhett Street", "ebay"),
   ];
 
-  it("follows a side street onto East Bay toward the merge", () => {
-    expect(flowPath(zones, "caswell")).toEqual(["South Caswell Avenue", "East Bay Street"]);
+  it("follows each side street onto its side of Bay Street toward the merge", () => {
+    expect(flowPath(zones, "caswell")).toEqual(["South Caswell Avenue", "West Bay Street"]);
+    expect(flowPath(zones, "rhett")).toEqual(["South Rhett Street", "East Bay Street"]);
     expect(flowPath(zones, "ebay")).toEqual(["East Bay Street"]);
   });
 
@@ -100,9 +103,10 @@ describe("staging traffic flow", () => {
     expect(flowPath(looped, "a")).toEqual(["A", "B"]);
   });
 
-  it("roots the tree at the street that leads to the merge", () => {
+  it("roots the tree at both Bay Street approaches to the merge", () => {
     const tree = flowTree(zones);
-    expect(tree.map((n) => n.zone.id)).toEqual(["ebay"]);
-    expect(tree[0].feeders.map((n) => n.zone.id)).toEqual(["lord", "caswell", "atlantic", "rhett"]);
+    expect(tree.map((n) => n.zone.id)).toEqual(["wbay", "ebay"]);
+    expect(tree[0].feeders.map((n) => n.zone.id)).toEqual(["caswell", "lord"]);
+    expect(tree[1].feeders.map((n) => n.zone.id)).toEqual(["atlantic", "rhett"]);
   });
 });

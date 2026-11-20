@@ -23,7 +23,7 @@ begin
   assert (select count(*) from public.restrictions where event_id = '00000000-0000-4000-8000-000000002026') > 0;
   d := public.event_dashboard('00000000-0000-4000-8000-000000002026');
   assert d ? 'applications_by_status';
-  assert jsonb_array_length(public.staging_layout('00000000-0000-4000-8000-000000002026') -> 'zones') = 5;
+  assert jsonb_array_length(public.staging_layout('00000000-0000-4000-8000-000000002026') -> 'zones') = 6;
   -- Leadership-only records
   assert (select count(*) from public.audit_logs where event_id = '00000000-0000-4000-8000-000000002026') > 0, 'audit hidden';
   assert (select count(*) from public.notifications where event_id = '00000000-0000-4000-8000-000000002026') > 0, 'notifications hidden';
