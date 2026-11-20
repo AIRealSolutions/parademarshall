@@ -144,6 +144,48 @@ export async function updateLane(input: { id: string; direction: string; width_f
   return done(error);
 }
 
+export async function setZoneFlow(id: string, feedsIntoZoneId: string | null): Promise<ActionResult> {
+  if (!uuid.safeParse(id).success || (feedsIntoZoneId !== null && !uuid.safeParse(feedsIntoZoneId).success)) {
+    return { error: "Choose a street from the list." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("staging_zones").update({ feeds_into_zone_id: feedsIntoZoneId }).eq("id", id);
+  return done(error);
+}
+
+/** Adds a lane to a staging street, copying lane 1's direction, width and block lengths. */
+export async function addLane(zoneId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: lanes, error: readError } = await supabase
+    .from("staging_lanes")
+    .select("lane_number, direction, width_ft, staging_blocks(block_number, usable_length_ft, permitted_width_ft)")
+    .eq("zone_id", zoneId)
+    .order("lane_number");
+  if (readError) return done(readError);
+  const first = lanes?.[0];
+  if (!first) return { error: "This street has no lane to copy." };
+  const { data: lane, error } = await supabase
+    .from("staging_lanes")
+    .insert({
+      zone_id: zoneId,
+      lane_number: Math.max(...lanes.map((l) => l.lane_number)) + 1,
+      direction: first.direction,
+      width_ft: first.width_ft,
+    })
+    .select("id")
+    .single();
+  if (error) return done(error);
+  const blocks = (first.staging_blocks ?? []).map((b) => ({
+    lane_id: lane.id,
+    block_number: b.block_number,
+    usable_length_ft: b.usable_length_ft,
+    permitted_width_ft: b.permitted_width_ft,
+  }));
+  if (blocks.length === 0) return done(null);
+  const { error: blockError } = await supabase.from("staging_blocks").insert(blocks);
+  return done(blockError);
+}
+
 export async function updateGeometry(
   kind: "zone" | "lane" | "block" | "route_segment" | "checkpoint",
   id: string,

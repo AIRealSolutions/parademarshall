@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireStaffEvent } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABELS, type EventRole } from "@/lib/domain/roles";
-import { stagedPositions, type StagingLayout } from "@/lib/domain/staging";
+import { flowPath, stagedPositions, type StagingLayout } from "@/lib/domain/staging";
 import { PrintButton } from "@/components/print-button";
 
 // §6: staff must be able to export a complete printable operational plan
@@ -23,6 +23,7 @@ export default async function OperationalPlan({ params }: { params: Promise<{ sl
     supabase.from("config_versions").select("version_number, stage, created_at, notes").eq("event_id", event.id).eq("kind", "staging").order("version_number", { ascending: false }).limit(1),
   ]);
   const layout = layoutData as StagingLayout | null;
+  const merge = layout?.checkpoints.find((c) => c.is_merge_point);
   const positions = layout ? stagedPositions(layout) : new Map();
   const v = versions?.[0];
 
@@ -94,6 +95,10 @@ export default async function OperationalPlan({ params }: { params: Promise<{ sl
               <h3 className="font-semibold">
                 {z.street_name} <span className="font-normal text-muted">({z.primary_use.replace("_", " ")}{z.field_validated ? "" : ", NOT field-validated"})</span>
               </h3>
+              <p className="ml-3">
+                Route to the merge: {[...flowPath(layout.zones, z.id), merge?.name ?? "merge"].join(" → ")}
+                {z.flow_notes ? `. ${z.flow_notes}` : ""}
+              </p>
               {z.lanes.map((l) => (
                 <div key={l.id} className="ml-3">
                   <p className="font-medium">

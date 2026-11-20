@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkPlacement, firstFreeOffset, lineupFeasibility, type LayoutBlock, type StagedPosition } from "../staging";
+import { checkPlacement, firstFreeOffset, flowPath, flowTree, lineupFeasibility, type LayoutBlock, type LayoutLane, type StagedPosition } from "../staging";
 
 const block = (assignments: [number, number][] = [], extra: Partial<LayoutBlock> = {}): LayoutBlock => ({
   id: "b",
@@ -72,5 +72,41 @@ describe("lineupFeasibility", () => {
     const w = lineupFeasibility(["b", "a", "c"], positions);
     expect(w).toHaveLength(1);
     expect(w[0].unit_ids).toEqual(["a", "b"]);
+  });
+});
+
+describe("staging traffic flow", () => {
+  const zone = (id: string, street_name: string, feeds_into_zone_id: string | null, laneCount = 1) => ({
+    id,
+    street_name,
+    feeds_into_zone_id,
+    lanes: Array.from({ length: laneCount }, (_, i) => ({ id: `${id}-${i}` })) as unknown as LayoutLane[],
+  });
+  // West to east along Bay Street; the merge is at Howe, between Lord and Atlantic.
+  const zones = [
+    zone("caswell", "South Caswell Avenue", "wbay"),
+    zone("lord", "South Lord Street", "wbay", 2),
+    zone("wbay", "West Bay Street", null, 2),
+    zone("ebay", "East Bay Street", null, 2),
+    zone("atlantic", "South Atlantic Avenue", "ebay"),
+    zone("rhett", "South Rhett Street", "ebay"),
+  ];
+
+  it("follows each side street onto its side of Bay Street toward the merge", () => {
+    expect(flowPath(zones, "caswell")).toEqual(["South Caswell Avenue", "West Bay Street"]);
+    expect(flowPath(zones, "rhett")).toEqual(["South Rhett Street", "East Bay Street"]);
+    expect(flowPath(zones, "ebay")).toEqual(["East Bay Street"]);
+  });
+
+  it("stops instead of looping forever on a bad chain", () => {
+    const looped = [zone("a", "A", "b"), zone("b", "B", "a")];
+    expect(flowPath(looped, "a")).toEqual(["A", "B"]);
+  });
+
+  it("roots the tree at both Bay Street approaches to the merge", () => {
+    const tree = flowTree(zones);
+    expect(tree.map((n) => n.zone.id)).toEqual(["wbay", "ebay"]);
+    expect(tree[0].feeders.map((n) => n.zone.id)).toEqual(["caswell", "lord"]);
+    expect(tree[1].feeders.map((n) => n.zone.id)).toEqual(["atlantic", "rhett"]);
   });
 });

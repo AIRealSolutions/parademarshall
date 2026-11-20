@@ -12,7 +12,7 @@ Stack: Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Post
 | Application review with role-aware transitions (FR-02) | Staff → Applications |
 | Unit registry: split multi-vehicle entries, reissue passes, print passes and every unit's dashboard sign | Staff → Unit Registry |
 | Participant parade-day kit: public pass page (QR, lineup number, staging spot and map, live status, what to expect), printable pass, full-page landscape windshield sign, save-as-image; pass link included in arrival emails | `/pass/[token]`, `/pass/[token]/sign` |
-| Staging map editor: draw streets, route and checkpoints; edit blocks and lanes; place units by measured footprint; live conflict checks; restrictions; plan approval with versioning; arrival instructions (FR-03, FR-04) | Staff → Staging Map |
+| Staging map editor: draw streets, route and checkpoints; edit blocks and lanes; set which street feeds which on the way to the merge (traffic flow); place units by measured footprint; live conflict checks; restrictions; plan approval with versioning; arrival instructions (FR-03, FR-04) | Staff → Staging Map |
 | Lineup builder: drag-and-drop or keyboard reordering, final unit, feasibility warnings (lane order, consecutive bands, split groups), publish to spectators (FR-05) | Staff → Lineup Builder |
 | Dispatch center: single active authorization, release, revoke, hold/skip, parade-wide hold, conflict resolution, live via Supabase Realtime (FR-06) | Staff → Dispatch Center |
 | Marshal field app: QR scan check-in, staged/ready, checkpoint passage, incident reports, offline queue showing "saved on device" vs "synced" (FR-06, FR-07) | `/marshal` |
@@ -54,6 +54,8 @@ npm run dev
 
 1. Create a Supabase project.
 2. Apply the migrations in `supabase/migrations/` in order, using `supabase db push` or the SQL editor. Then run `supabase/seed.sql` to load the Southport 2026 event.
+
+   The seed's staging layout, west to east along Bay St: South Caswell Ave and South Lord St (two lanes) face south and turn left onto West Bay St; South Atlantic Ave and South Rhett St face south and turn right onto East Bay St, where the main lineup extends. Both sides of Bay St meet at the merge at South Howe St, and the parade goes north on Howe. Re-running `seed.sql` brings an existing database up to this layout. Streets that already have units placed on them are left as they are.
 3. In **Auth → URL Configuration**, add `https://<your-domain>/auth/callback` (and `http://localhost:3000/auth/callback`) to the redirect URLs.
 4. In **Auth → Email Templates → Magic Link**, use a template that works on any device and includes a code:
 

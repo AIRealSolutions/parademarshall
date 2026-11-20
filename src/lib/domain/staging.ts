@@ -60,6 +60,10 @@ export interface LayoutZone {
   field_validated: boolean;
   length_ft: number | null;
   geometry: GeoLine | null;
+  /** The street this one empties onto; null means it leads straight to the merge. */
+  feeds_into_zone_id: string | null;
+  feeds_into: string | null;
+  flow_notes: string | null;
   lanes: LayoutLane[];
 }
 
@@ -246,4 +250,40 @@ export function lineupFeasibility(orderedUnitIds: string[], positions: Map<strin
     }
   }
   return warnings;
+}
+
+/**
+ * Streets a unit staged in `zoneId` drives through to reach the merge, starting
+ * with its own street. Stops if the chain loops (the database forbids that).
+ */
+export function flowPath(zones: Pick<LayoutZone, "id" | "street_name" | "feeds_into_zone_id">[], zoneId: string): string[] {
+  const byId = new Map(zones.map((z) => [z.id, z]));
+  const path: string[] = [];
+  const seen = new Set<string>();
+  let cursor = byId.get(zoneId);
+  while (cursor && !seen.has(cursor.id)) {
+    seen.add(cursor.id);
+    path.push(cursor.street_name);
+    cursor = cursor.feeds_into_zone_id ? byId.get(cursor.feeds_into_zone_id) : undefined;
+  }
+  return path;
+}
+
+export interface FlowNode {
+  zone: Pick<LayoutZone, "id" | "street_name" | "feeds_into_zone_id" | "lanes">;
+  feeders: FlowNode[];
+}
+
+/** The staging streets as a tree rooted at the streets that lead straight to the merge. */
+export function flowTree<Z extends Pick<LayoutZone, "id" | "street_name" | "feeds_into_zone_id" | "lanes">>(zones: Z[]): FlowNode[] {
+  const ids = new Set(zones.map((z) => z.id));
+  const build = (z: Z, seen: Set<string>): FlowNode => ({
+    zone: z,
+    feeders: zones
+      .filter((f) => f.feeds_into_zone_id === z.id && !seen.has(f.id))
+      .map((f) => build(f, new Set([...seen, f.id]))),
+  });
+  return zones
+    .filter((z) => !z.feeds_into_zone_id || !ids.has(z.feeds_into_zone_id))
+    .map((z) => build(z, new Set([z.id])));
 }
